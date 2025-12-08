@@ -7,10 +7,10 @@ import com.bill.bill_chess.domain.enums.Color;
 import com.bill.bill_chess.domain.enums.PieceType;
 
 import lombok.AllArgsConstructor;
-import lombok.AccessLevel;
+//import lombok.AccessLevel;
 import lombok.Getter;
 
-@AllArgsConstructor(access = AccessLevel.PRIVATE)
+@AllArgsConstructor // (access = AccessLevel.PRIVATE)
 @Getter
 public class Board {
     private final Piece[][] squares;
@@ -32,6 +32,26 @@ public class Board {
         setupPawns(squares, 1, Color.WHITE);
         setupBackRank(squares, 7, Color.BLACK);
         setupPawns(squares, 6, Color.BLACK);
+    }
+
+    public static Board fromFen(String fenBoard) {
+
+        Piece[][] squares = new Piece[8][8];
+        String[] rankStr = fenBoard.split("/");
+        for (int r = 0; r < 8; r++) {
+            String row = rankStr[7 - r];
+            int file = 0;
+            for (char c : row.toCharArray()) {
+                if (Character.isDigit(c)) {
+                    file += c - '0';
+                } else {
+                    squares[r][file] = Piece.fromUnicode(String.valueOf(c));
+                    file++;
+                }
+            }
+        }
+
+        return new Board(squares, List.of());
     }
 
     public Optional<Piece> pieceAt(Position position) {
