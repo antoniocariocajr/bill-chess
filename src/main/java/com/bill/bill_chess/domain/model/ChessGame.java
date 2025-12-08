@@ -1,13 +1,10 @@
 package com.bill.bill_chess.domain.model;
 
 import java.time.Instant;
-import java.util.ArrayList;
-import java.util.List;
 
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.annotation.LastModifiedDate;
-import org.springframework.data.mongodb.core.mapping.DBRef;
 import org.springframework.data.mongodb.core.mapping.Document;
 
 import com.bill.bill_chess.domain.enums.Color;
@@ -27,7 +24,6 @@ public class ChessGame {
     @Id
     private String id;
 
-    @DBRef
     private Board board;
 
     // private Player whitePlayer;
@@ -42,10 +38,6 @@ public class ChessGame {
     @Builder.Default
     private boolean isGameOver = false;
 
-    @DBRef
-    @Builder.Default
-    private List<Move> moveHistory = new ArrayList<>();
-
     @Builder.Default
     @CreatedDate
     private Instant createdAt = Instant.now();
@@ -55,28 +47,16 @@ public class ChessGame {
     private Instant updatedAt = Instant.now();
 
     public ChessGame() {
-        this.board = new Board();
-    }
-
-    public Move getLastMove() {
-        if (moveHistory.isEmpty()) {
-            return null;
-        }
-        return moveHistory.get(moveHistory.size() - 1);
+        this.board = Board.create();
     }
 
     public void makeMove(Move move) {
-        moveHistory.add(move);
-        board.movePiece(move.getFrom(), move.getTo());
+        board.doMove(move);
         correntColor = correntColor == Color.WHITE ? Color.BLACK : Color.WHITE;
     }
 
     public void undoMove() {
-        if (moveHistory.isEmpty()) {
-            return;
-        }
-        Move move = moveHistory.remove(moveHistory.size() - 1);
-        board.movePiece(move.getTo(), move.getFrom());
+        board.undoMove();
         correntColor = correntColor == Color.WHITE ? Color.BLACK : Color.WHITE;
     }
 
@@ -86,18 +66,15 @@ public class ChessGame {
     }
 
     public void resetGame() {
-        this.board.initializeBoard();
+        this.board = Board.create();
         this.correntColor = Color.WHITE;
-        this.moveHistory.clear();
         this.status = GameStatus.IN_PROGRESS;
         this.isGameOver = false;
+        update();
     }
 
     public void update() {
         this.updatedAt = Instant.now();
     }
 
-    public int getMoveCount() {
-        return moveHistory.size();
-    }
 }

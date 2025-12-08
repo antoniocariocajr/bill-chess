@@ -1,55 +1,27 @@
 package com.bill.bill_chess.domain.model;
 
-import org.springframework.data.annotation.Id;
-import org.springframework.data.mongodb.core.mapping.DBRef;
-import org.springframework.data.mongodb.core.mapping.Document;
-
 import com.bill.bill_chess.domain.enums.Color;
 import com.bill.bill_chess.domain.enums.PieceType;
 
 import lombok.AllArgsConstructor;
-import lombok.Builder;
 import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
 
-@Builder
-@NoArgsConstructor
 @AllArgsConstructor
 @Getter
-@Setter
-@Document
 public class Piece {
 
-    @Id
-    private String id;
+    private final PieceType type;
 
-    private PieceType type;
+    private final Color color;
 
-    private Color color;
-
-    @DBRef
-    private Position position;
-
-    @Builder.Default
-    private boolean hasMoved = false;
-
-    @Builder.Default
-    private boolean isCaptured = false;
-
-    public Piece(PieceType type, Color color) {
-        this.type = type;
-        this.color = color;
+    public static Piece fromUnicode(String unicode) {
+        return new Piece(PieceType.valueOf(unicode.toUpperCase()),
+                Character.isUpperCase(unicode.charAt(0)) ? Color.WHITE : Color.BLACK);
     }
 
-    public Piece(PieceType type, Color color, Position position) {
-        this(type, color);
-        this.position = position;
-    }
-
-    public String getSymbol() {
-        String symbol = type.getSymbol();
-        return color == Color.WHITE ? symbol : symbol.toLowerCase();
+    public String getUnicode() {
+        String unicode = type.getUnicode();
+        return color == Color.WHITE ? unicode : unicode.toLowerCase();
     }
 
 }

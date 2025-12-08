@@ -1,32 +1,15 @@
 package com.bill.bill_chess.domain.model;
 
-import org.springframework.data.annotation.Id;
-import org.springframework.data.mongodb.core.mapping.Document;
-
 import lombok.AllArgsConstructor;
-import lombok.Builder;
 import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
 
-@NoArgsConstructor
 @AllArgsConstructor
 @Getter
-@Setter
-@Builder
-@Document
 public class Position {
-    @Id
-    private String id;
-    private int rank; // 0-7
-    private int file; // 0-7 (a-h)
+    private final int rank; // 0-7
+    private final int file; // 0-7 (a-h)
 
-    public Position(int rank, int file) {
-        this.rank = rank;
-        this.file = file;
-    }
-
-    public Position fromNotation(String notation) {
+    public static Position fromNotation(String notation) {
         if (notation == null || notation.length() != 2) {
             throw new IllegalArgumentException("Invalid notation: " + notation);
         }
@@ -37,7 +20,7 @@ public class Position {
         int file = fileChar - 'a';
         int rank = Character.getNumericValue(rankChar);
 
-        if (!isValid()) {
+        if (file < 0 || file > 7 || rank < 0 || rank > 7) {
             throw new IllegalArgumentException("Invalid notation: " + notation);
         }
 

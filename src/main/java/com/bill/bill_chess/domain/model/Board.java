@@ -1,93 +1,82 @@
 package com.bill.bill_chess.domain.model;
 
-import java.time.Instant;
-
-import org.springframework.data.annotation.CreatedDate;
-import org.springframework.data.annotation.Id;
-import org.springframework.data.mongodb.core.mapping.DBRef;
+import java.util.List;
+import java.util.Optional;
 
 import com.bill.bill_chess.domain.enums.Color;
 import com.bill.bill_chess.domain.enums.PieceType;
 
 import lombok.AllArgsConstructor;
-import lombok.Builder;
+import lombok.AccessLevel;
 import lombok.Getter;
-import lombok.Setter;
 
+@AllArgsConstructor(access = AccessLevel.PRIVATE)
 @Getter
-@Setter
-@AllArgsConstructor
-@Builder
 public class Board {
-    @Id
-    private String id;
+    private final Piece[][] squares;
+    private final List<Move> history;
 
-    @DBRef
-    private Piece[][] board;
-
-    @Builder.Default
-    @CreatedDate
-    private Instant createdAt = Instant.now();
-
-    public Board() {
-        this.board = new Piece[8][8];
-        initializeBoard();
+    public static Board create() {
+        Piece[][] squares = new Piece[8][8];
+        initializeBoard(squares);
+        return new Board(squares, List.of());
     }
 
-    public void initializeBoard() {
+    private static void initializeBoard(Piece[][] squares) {
         for (int rank = 0; rank < 8; rank++) {
             for (int file = 0; file < 8; file++) {
-                board[rank][file] = null;
+                squares[rank][file] = null;
             }
         }
-        setupBackRank(0, Color.WHITE);
-        setupPawns(1, Color.WHITE);
-        setupBackRank(7, Color.BLACK);
-        setupPawns(6, Color.BLACK);
+        setupBackRank(squares, 0, Color.WHITE);
+        setupPawns(squares, 1, Color.WHITE);
+        setupBackRank(squares, 7, Color.BLACK);
+        setupPawns(squares, 6, Color.BLACK);
     }
 
-    public void printBoard() {
-        for (int rank = 7; rank >= 0; rank--) {
-            for (int file = 0; file < 8; file++) {
-                Piece piece = board[rank][file];
-                if (piece == null) {
-                    System.out.print(". ");
-                } else {
-                    System.out.print(piece.getSymbol() + " ");
-                }
-            }
-            System.out.println();
-        }
+    public Optional<Piece> pieceAt(Position position) {
+        return Optional.ofNullable(squares[position.getRank()][position.getFile()]);
     }
 
-    public boolean isPieceAt(Position position) {
-        return board[position.getRank()][position.getFile()] != null;
+    public void doMove(Move move) {
+        Position to = Position.fromNotation(move.getTo());
+        Position from = Position.fromNotation(move.getFrom());
+        squares[to.getRank()][to.getFile()] = squares[from.getRank()][from.getFile()];
+        squares[from.getRank()][from.getFile()] = null;
+        history.add(move);
     }
 
-    public Piece getPieceAt(Position position) {
-        return board[position.getRank()][position.getFile()];
+    public void undoMove() {
+        Move lastMove = history.remove(history.size() - 1);
+        Position from = Position.fromNotation(lastMove.getFrom());
+        Position to = Position.fromNotation(lastMove.getTo());
+        squares[from.getRank()][from.getFile()] = squares[to.getRank()][to.getFile()];
+        squares[to.getRank()][to.getFile()] = lastMove.captured().orElse(null);
     }
 
-    public void movePiece(Position from, Position to) {
-        Piece piece = board[from.getRank()][from.getFile()];
-        board[to.getRank()][to.getFile()] = piece;
-        board[from.getRank()][from.getFile()] = null;
+    public int getMoveCount() {
+        return history.size();
     }
 
-    private void setupBackRank(int rank, Color color) {
-        board[rank][0] = new Piece(PieceType.ROOK, color, new Position(rank, 0));
-        board[rank][1] = new Piece(PieceType.KNIGHT, color, new Position(rank, 1));
-        board[rank][2] = new Piece(PieceType.BISHOP, color, new Position(rank, 2));
-        board[rank][3] = new Piece(PieceType.QUEEN, color, new Position(rank, 3));
-        board[rank][4] = new Piece(PieceType.KING, color, new Position(rank, 4));
-        board[rank][5] = new Piece(PieceType.BISHOP, color, new Position(rank, 5));
-        board[rank][6] = new Piece(PieceType.KNIGHT, color, new Position(rank, 6));
-        board[rank][7] = new Piece(PieceType.ROOK, color, new Position(rank, 7));
+    public boolean isEnemyPiece(Position position, Color color) {
+        Piece piece = pieceAt(position).orElse(null);
+        return piece != null && piece.getColor() != color;
     }
 
-    private void setupPawns(int rank, Color color) {
+    private static void setupBackRank(Piece[][] squares, int rank, Color color) {
+        squares[rank][0] = new Piece(PieceType.ROOK, color);
+        squares[rank][1] = new Piece(PieceType.KNIGHT, color);
+        squares[rank][2] = new Piece(PieceType.BISHOP, color);
+        squares[rank][3] = new Piece(PieceType.QUEEN, color);
+        squares[rank][4] = new Piece(PieceType.KING, color);
+        squares[rank][5] = new Piece(PieceType.BISHOP, color);
+        squares[rank][6] = new Piece(PieceType.KNIGHT, color);
+        squares[rank][7] = new Piece(PieceType.ROOK, color);
+    }
+
+    private static void setupPawns(Piece[][] squares, int rank, Color color) {
         for (int file = 0; file < 8; file++) {
-            board[rank][file] = new Piece(PieceType.PAWN, color, new Position(rank, file));
+            squares[rank][file] = new Piece(PieceType.PAWN, color);
         }
     }
 }
