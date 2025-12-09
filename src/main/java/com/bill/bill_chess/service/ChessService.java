@@ -3,6 +3,7 @@ package com.bill.bill_chess.service;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.server.ResponseStatusException;
 
 import com.bill.bill_chess.core.ChessMapper;
@@ -14,7 +15,7 @@ import com.bill.bill_chess.domain.model.Board;
 import com.bill.bill_chess.domain.model.ChessGame;
 import com.bill.bill_chess.domain.model.Move;
 import com.bill.bill_chess.domain.model.Position;
-import com.bill.bill_chess.dto.ChessDto;
+import com.bill.bill_chess.dto.GameStateDto;
 import com.bill.bill_chess.dto.LegalMovesDto;
 import com.bill.bill_chess.dto.MoveDto;
 import com.bill.bill_chess.persistence.ChessEntity;
@@ -31,18 +32,19 @@ public class ChessService {
 
     private final ChessRepository chessRepository;
     private final ChessMapper chessMapper;
+    private final WebClient stockfish = WebClient.create("https://stockfish.online");
 
     /* ---------- Criar nova partida ---------- */
     @Transactional
-    public ChessDto createGame() {
+    public GameStateDto createGame() {
         ChessEntity entity = ChessEntity.initial();
         entity = chessRepository.save(entity);
-        return chessMapper.toDto(entity);
+        return chessMapper.toGameStateDto(entity);
     }
 
     /* ---------- Jogada ---------- */
     @Transactional
-    public ChessDto makeMove(String gameId, MoveDto dto) {
+    public GameStateDto makeMove(String gameId, MoveDto dto) {
         // 1) busca
         ChessEntity entity = chessRepository.findById(gameId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Game not found"));
@@ -51,32 +53,57 @@ public class ChessService {
         ChessGame game = chessMapper.toDomain(entity);
 
         // 3) validações
-        validateTurn(dto, game.getCorrentColor());
+        validateTurn(dto, game.getActiveColor());
         Move move = Move.fromUci(dto.uci());
-        validateLegality(game.getBoard(), move, game.getCorrentColor(), game.getCastleRights(), game.getEnPassant());
+        validateLegality(game.getBoard(), move, game.getActiveColor(), game.getCastleRights(), game.getEnPassant());
 
         // 4) executa o lance
         game.getBoard().doMove(move);
         game.setCastleRights(updateCastlingRights(game.getCastleRights(), move));
         game.setEnPassant(updateEnPassant(game.getBoard(), move));
-        game.setCorrentColor(game.getCorrentColor().opposite());
+        game.setActiveColor(game.getActiveColor().opposite());
         if (move.getPieceMoved().isPawn()) {
             game.setHalfMoveClock(0);
         } else {
             int half = move.captured().isPresent() ? 0 : entity.halfMoveClock() + 1;
             game.setHalfMoveClock(half);
         }
-        int full = game.getCorrentColor() == Color.WHITE ? entity.fullMoveNumber() + 1 : entity.fullMoveNumber();
+        int full = game.getActiveColor() == Color.WHITE ? entity.fullMoveNumber() + 1 : entity.fullMoveNumber();
         game.setFullMoveNumber(full);
         // 5) status final
-        GameStatus status = RuleSet.classify(game.getBoard(), game.getCorrentColor(), game.getCastleRights(),
+        GameStatus status = RuleSet.classify(game.getBoard(), game.getActiveColor(), game.getCastleRights(),
                 game.getEnPassant());
         game.setStatus(status);
 
         // 6) salva
         ChessEntity updated = chessMapper.toEntity(game);
         updated = chessRepository.save(updated);
-        return chessMapper.toDto(updated);
+        return chessMapper.toGameStateDto(updated);
+    }
+
+    public GameStateDto makeHumanMove(String gameId, MoveDto dto) {
+        return makeMove(gameId, dto);
+    }
+
+    /** using when the opponent is the BOT. */
+    @Transactional
+    public GameStateDto makeBotMove(String gameId, int depth) {
+        // 1) current state
+        ChessEntity entity = chessRepository.findById(gameId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Game not found"));
+
+        ChessGame game = chessMapper.toDomain(entity);
+
+        // 2) only plays if it is the bot's turn
+        if (game.getPlayerBotColor() != game.getActiveColor()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Not bot turn");
+        }
+
+        // 3) asks the engine
+        String uci = askEngine(entity.toFen(), depth);
+
+        // 4) reuses the existing flow
+        return makeMove(gameId, new MoveDto(game.getPlayerBotColor().name(), uci));
     }
 
     public LegalMovesDto getLegalMoves(String gameId) {
@@ -84,15 +111,15 @@ public class ChessService {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Game not found"));
         ChessGame game = chessMapper.toDomain(entity);
         List<String> moves = RuleSet
-                .generateLegal(game.getBoard(), game.getCorrentColor(), game.getCastleRights(), game.getEnPassant())
+                .generateLegal(game.getBoard(), game.getActiveColor(), game.getCastleRights(), game.getEnPassant())
                 .stream().map(Move::toUci).toList();
         return new LegalMovesDto(moves);
     }
 
-    public ChessDto getGame(String gameId) {
+    public GameStateDto getGame(String gameId) {
         ChessEntity entity = chessRepository.findById(gameId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Game not found"));
-        return chessMapper.toDto(entity);
+        return chessMapper.toGameStateDto(entity);
     }
 
     private void validateTurn(MoveDto dto, Color active) {
@@ -163,6 +190,18 @@ public class ChessService {
             return Position.of((from.getRank() + to.getRank()) / 2, from.getFile());
         }
         return null;
+    }
+
+    /* ---------- consulta motor ---------- */
+    private String askEngine(String fen, int depth) {
+        return stockfish.get()
+                .uri(b -> b.path("/api/stockfish.php")
+                        .queryParam("fen", fen)
+                        .queryParam("depth", depth)
+                        .build())
+                .retrieve()
+                .bodyToMono(String.class)
+                .block(); // ex: "e2e4"
     }
 
 }

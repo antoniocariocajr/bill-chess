@@ -6,6 +6,7 @@ import java.util.stream.Collectors;
 
 import com.bill.bill_chess.domain.enums.CastleRight;
 import com.bill.bill_chess.domain.enums.Color;
+import com.bill.bill_chess.domain.enums.GameStatus;
 import com.bill.bill_chess.domain.model.Board;
 import com.bill.bill_chess.domain.model.Piece;
 import com.bill.bill_chess.domain.model.Position;
@@ -23,10 +24,13 @@ public final class FenUtils {
             String id,
             Board board,
             Color active,
+            Color playerBot,
             Set<CastleRight> rights,
             Position enPassant,
             int halfMove,
             int fullMove,
+            boolean inCheck,
+            GameStatus status,
             Instant createdAt,
             Instant updatedAt) {
         StringBuilder boardFen = new StringBuilder();
@@ -50,19 +54,23 @@ public final class FenUtils {
                 boardFen.append('/');
         }
 
-        List<String> moves = board.getHistory().stream()
+        List<String> listMoves = board.getHistory().stream()
                 .map(move -> move.toUci()).toList();
+
         String setRights = rights.stream().map(CastleRight::getFenSymbol).collect(Collectors.joining());
 
         return new ChessEntity(
                 id,
                 boardFen.toString(),
                 active == Color.WHITE ? "w" : "b",
+                playerBot == Color.WHITE ? "w" : "b",
                 setRights,
                 enPassant == null ? "-" : enPassant.toNotation(),
                 halfMove,
                 fullMove,
-                moves,
+                inCheck,
+                status.toString().toUpperCase(),
+                listMoves,
                 createdAt,
                 updatedAt);
     }

@@ -11,15 +11,18 @@ public record ChessEntity(
                 @Id String id,
                 String fenBoard, // posição
                 String activeColor, // "w" ou "b"
+                String playerBotColor, // "w" ou "b"
                 String castlingRights, // "KQkq" ou "-"
                 String enPassantSquare, // "e3" ou "-"
                 int halfMoveClock,
                 int fullMoveNumber,
+                boolean inCheck,
+                String status,
                 List<String> moves, // histórico UCI
                 Instant createdAt,
                 Instant updatedAt) {
 
-        public String fen() {
+        public String toFen() {
                 return fenBoard + " " + activeColor + " " + castlingRights + " " + enPassantSquare + " " + halfMoveClock
                                 + " " + fullMoveNumber;
         }
@@ -28,7 +31,9 @@ public record ChessEntity(
                 return new ChessEntity(
                                 null,
                                 "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR",
-                                "w", "KQkq", "-", 0, 1,
+                                "w", "b", "KQkq", "-", 0, 1,
+                                false,
+                                "IN_PROGRESS",
                                 List.of(),
                                 Instant.now(),
                                 Instant.now());
