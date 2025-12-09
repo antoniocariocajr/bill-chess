@@ -12,6 +12,7 @@ import com.bill.bill_chess.domain.model.Board;
 import com.bill.bill_chess.domain.model.ChessGame;
 import com.bill.bill_chess.domain.model.Move;
 import com.bill.bill_chess.domain.model.Position;
+import com.bill.bill_chess.dto.ChessDto;
 import com.bill.bill_chess.persistence.ChessEntity;
 
 @Component
@@ -67,6 +68,10 @@ public class ChessMapper {
                 .createdAt(entity.createdAt())
                 .updatedAt(entity.updatedAt())
                 .build();
+    }
+
+    public ChessDto toDto(ChessEntity entity) {
+        return new ChessDto(entity.id(), entity.fen());
     }
 
 }

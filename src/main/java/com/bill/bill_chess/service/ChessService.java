@@ -14,6 +14,7 @@ import com.bill.bill_chess.domain.model.Board;
 import com.bill.bill_chess.domain.model.ChessGame;
 import com.bill.bill_chess.domain.model.Move;
 import com.bill.bill_chess.domain.model.Position;
+import com.bill.bill_chess.dto.ChessDto;
 import com.bill.bill_chess.dto.LegalMovesDto;
 import com.bill.bill_chess.dto.MoveDto;
 import com.bill.bill_chess.persistence.ChessEntity;
@@ -33,15 +34,15 @@ public class ChessService {
 
     /* ---------- Criar nova partida ---------- */
     @Transactional
-    public String createGame() {
+    public ChessDto createGame() {
         ChessEntity entity = ChessEntity.initial();
         entity = chessRepository.save(entity);
-        return entity.id();
+        return chessMapper.toDto(entity);
     }
 
     /* ---------- Jogada ---------- */
     @Transactional
-    public void makeMove(String gameId, MoveDto dto) {
+    public ChessDto makeMove(String gameId, MoveDto dto) {
         // 1) busca
         ChessEntity entity = chessRepository.findById(gameId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Game not found"));
@@ -74,7 +75,8 @@ public class ChessService {
 
         // 6) salva
         ChessEntity updated = chessMapper.toEntity(game);
-        chessRepository.save(updated);
+        updated = chessRepository.save(updated);
+        return chessMapper.toDto(updated);
     }
 
     public LegalMovesDto getLegalMoves(String gameId) {
@@ -85,6 +87,12 @@ public class ChessService {
                 .generateLegal(game.getBoard(), game.getCorrentColor(), game.getCastleRights(), game.getEnPassant())
                 .stream().map(Move::toUci).toList();
         return new LegalMovesDto(moves);
+    }
+
+    public ChessDto getGame(String gameId) {
+        ChessEntity entity = chessRepository.findById(gameId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Game not found"));
+        return chessMapper.toDto(entity);
     }
 
     private void validateTurn(MoveDto dto, Color active) {
