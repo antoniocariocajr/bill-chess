@@ -54,6 +54,26 @@ public class Board {
         return new Board(squares, List.of());
     }
 
+    public static Board fromFen(String fenBoard, List<Move> history) {
+
+        Piece[][] squares = new Piece[8][8];
+        String[] rankStr = fenBoard.split("/");
+        for (int r = 0; r < 8; r++) {
+            String row = rankStr[7 - r];
+            int file = 0;
+            for (char c : row.toCharArray()) {
+                if (Character.isDigit(c)) {
+                    file += c - '0';
+                } else {
+                    squares[r][file] = Piece.fromUnicode(String.valueOf(c));
+                    file++;
+                }
+            }
+        }
+
+        return new Board(squares, history);
+    }
+
     public Board copy() {
         Piece[][] newSquares = new Piece[8][8];
         for (int r = 0; r < 8; r++) {
