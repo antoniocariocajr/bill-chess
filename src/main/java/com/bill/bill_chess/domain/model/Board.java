@@ -54,6 +54,16 @@ public class Board {
         return new Board(squares, List.of());
     }
 
+    public Board copy() {
+        Piece[][] newSquares = new Piece[8][8];
+        for (int r = 0; r < 8; r++) {
+            for (int f = 0; f < 8; f++) {
+                newSquares[r][f] = squares[r][f];
+            }
+        }
+        return new Board(newSquares, List.of());
+    }
+
     public Optional<Piece> pieceAt(Position position) {
         return Optional.ofNullable(squares[position.getRank()][position.getFile()]);
     }

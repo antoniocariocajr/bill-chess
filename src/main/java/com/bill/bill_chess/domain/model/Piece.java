@@ -14,6 +14,10 @@ public class Piece {
 
     private final Color color;
 
+    public static Piece of(Color color, PieceType type) {
+        return new Piece(type, color);
+    }
+
     public static Piece fromUnicode(String unicode) {
         return new Piece(PieceType.valueOf(unicode.toUpperCase()),
                 Character.isUpperCase(unicode.charAt(0)) ? Color.WHITE : Color.BLACK);

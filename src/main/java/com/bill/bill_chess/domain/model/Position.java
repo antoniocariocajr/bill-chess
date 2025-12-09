@@ -27,12 +27,20 @@ public class Position {
         return new Position(rank, file);
     }
 
+    public static Position of(int rank, int file) {
+        return new Position(rank, file);
+    }
+
     public String toNotation() {
         char fileChar = (char) ('a' + file);
         return "" + fileChar + rank;
     }
 
     public boolean isValid() {
+        return rank >= 0 && rank <= 7 && file >= 0 && file <= 7;
+    }
+
+    public static boolean isValid(int rank, int file) {
         return rank >= 0 && rank <= 7 && file >= 0 && file <= 7;
     }
 
