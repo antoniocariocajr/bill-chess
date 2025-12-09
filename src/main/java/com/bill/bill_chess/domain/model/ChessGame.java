@@ -9,7 +9,7 @@ import org.springframework.data.annotation.LastModifiedDate;
 import com.bill.bill_chess.domain.enums.CastleRight;
 import com.bill.bill_chess.domain.enums.Color;
 import com.bill.bill_chess.domain.enums.GameStatus;
-import com.bill.bill_chess.persistence.BoardEntity;
+import com.bill.bill_chess.persistence.ChessEntity;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -59,7 +59,7 @@ public class ChessGame {
         this.board = Board.create();
     }
 
-    public ChessGame(BoardEntity boardEntity) {
+    public ChessGame(ChessEntity boardEntity) {
 
         this.id = boardEntity.id();
         this.board = Board.fromFen(boardEntity.fenBoard());

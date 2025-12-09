@@ -7,7 +7,7 @@ import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
 
 @Document(collection = "boards")
-public record BoardEntity(
+public record ChessEntity(
                 @Id String id,
                 String fenBoard, // posição
                 String activeColor, // "w" ou "b"
@@ -22,5 +22,15 @@ public record BoardEntity(
         public String fen() {
                 return fenBoard + " " + activeColor + " " + castlingRights + " " + enPassantSquare + " " + halfMoveClock
                                 + " " + fullMoveNumber;
+        }
+
+        public static ChessEntity initial() {
+                return new ChessEntity(
+                                null,
+                                "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR",
+                                "w", "KQkq", "-", 0, 1,
+                                List.of(),
+                                Instant.now(),
+                                Instant.now());
         }
 }

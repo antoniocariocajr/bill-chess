@@ -9,46 +9,49 @@ import lombok.Getter;
 @Getter
 public class Move {
 
-    private String from;
+    private final String from;
 
-    private String to;
+    private final String to;
 
-    private Piece capturedPiece;
+    private final Piece capturedPiece;
 
-    private Piece pawnPromotion;
+    private final Piece pawnPromotion;
 
-    private boolean isCastling;
+    private final boolean isCastling;
 
-    private boolean isEnPassant;
+    private final boolean isEnPassant;
+
+    private final Piece pieceMoved;
 
     public Move(Position from, Position to, Piece capturedPiece, Piece pawnPromotion, boolean isCastling,
-            boolean isEnPassant) {
+            boolean isEnPassant, Piece pieceMoved) {
         this.from = from.toNotation();
         this.to = to.toNotation();
         this.capturedPiece = capturedPiece;
         this.pawnPromotion = pawnPromotion;
         this.isCastling = isCastling;
         this.isEnPassant = isEnPassant;
+        this.pieceMoved = pieceMoved;
     }
 
-    public static Move quiet(Position from, Position to) {
-        return new Move(from, to, null, null, false, false);
+    public static Move quiet(Position from, Position to, Piece pieceMoved) {
+        return new Move(from, to, null, null, false, false, pieceMoved);
     }
 
-    public static Move capture(Position from, Position to, Piece capturedPiece) {
-        return new Move(from, to, capturedPiece, null, false, false);
+    public static Move capture(Position from, Position to, Piece capturedPiece, Piece pieceMoved) {
+        return new Move(from, to, capturedPiece, null, false, false, pieceMoved);
     }
 
-    public static Move promotion(Position from, Position to, Piece promoted) {
-        return new Move(from, to, null, promoted, false, false);
+    public static Move promotion(Position from, Position to, Piece promoted, Piece pieceMoved) {
+        return new Move(from, to, null, promoted, false, false, pieceMoved);
     }
 
-    public static Move enPassant(Position from, Position to, Piece capturedPiece) {
-        return new Move(from, to, capturedPiece, null, false, true);
+    public static Move enPassant(Position from, Position to, Piece capturedPiece, Piece pieceMoved) {
+        return new Move(from, to, capturedPiece, null, false, true, pieceMoved);
     }
 
-    public static Move castle(Position from, Position to) {
-        return new Move(from, to, null, null, true, false);
+    public static Move castle(Position from, Position to, Piece pieceMoved) {
+        return new Move(from, to, null, null, true, false, pieceMoved);
     }
 
     public Optional<Piece> captured() {
@@ -73,9 +76,9 @@ public class Move {
         Position to = Position.fromNotation(uci.substring(2, 4));
         if (uci.length() == 5) {
             Piece pr = Piece.fromUnicode(uci.substring(4));
-            return promotion(from, to, pr);
+            return promotion(from, to, pr, pr);
         }
-        return quiet(from, to); // captura/en-passant/castling são descobertos pelo Board
+        return quiet(from, to, null); // captura/en-passant/castling são descobertos pelo Board
     }
 
     @Override

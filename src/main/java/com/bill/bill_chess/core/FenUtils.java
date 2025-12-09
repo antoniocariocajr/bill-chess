@@ -9,7 +9,7 @@ import com.bill.bill_chess.domain.enums.Color;
 import com.bill.bill_chess.domain.model.Board;
 import com.bill.bill_chess.domain.model.Piece;
 import com.bill.bill_chess.domain.model.Position;
-import com.bill.bill_chess.persistence.BoardEntity;
+import com.bill.bill_chess.persistence.ChessEntity;
 
 /**
  * Converte Board ↔ FEN e extrai metadados (roque, en-passant).
@@ -19,8 +19,16 @@ public final class FenUtils {
     private FenUtils() {
     }
 
-    public static BoardEntity toEntity(String id, Board board, Color active, Set<CastleRight> rights,
-            Position enPassant, int halfMove, int fullMove, Instant createdAt, Instant updatedAt) {
+    public static ChessEntity toEntity(
+            String id,
+            Board board,
+            Color active,
+            Set<CastleRight> rights,
+            Position enPassant,
+            int halfMove,
+            int fullMove,
+            Instant createdAt,
+            Instant updatedAt) {
         StringBuilder boardFen = new StringBuilder();
         for (int rank = 7; rank >= 0; rank--) {
             int empty = 0;
@@ -46,7 +54,7 @@ public final class FenUtils {
                 .map(move -> move.toUci()).toList();
         String setRights = rights.stream().map(CastleRight::getFenSymbol).collect(Collectors.joining());
 
-        return new BoardEntity(
+        return new ChessEntity(
                 id,
                 boardFen.toString(),
                 active == Color.WHITE ? "w" : "b",

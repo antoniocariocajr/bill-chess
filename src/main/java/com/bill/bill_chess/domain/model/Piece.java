@@ -28,4 +28,36 @@ public class Piece {
         return color == Color.WHITE ? unicode : unicode.toLowerCase();
     }
 
+    public boolean isWhite() {
+        return color == Color.WHITE;
+    }
+
+    public boolean isBlack() {
+        return color == Color.BLACK;
+    }
+
+    public boolean isPawn() {
+        return type == PieceType.PAWN;
+    }
+
+    public boolean isKnight() {
+        return type == PieceType.KNIGHT;
+    }
+
+    public boolean isBishop() {
+        return type == PieceType.BISHOP;
+    }
+
+    public boolean isRook() {
+        return type == PieceType.ROOK;
+    }
+
+    public boolean isQueen() {
+        return type == PieceType.QUEEN;
+    }
+
+    public boolean isKing() {
+        return type == PieceType.KING;
+    }
+
 }

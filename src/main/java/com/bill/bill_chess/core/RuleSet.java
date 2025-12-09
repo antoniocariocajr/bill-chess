@@ -35,11 +35,11 @@ public final class RuleSet {
         pseudo.addAll(generateCastling(board, colorSide, rights));
         // 3) Filtra xeque
         List<Move> legal = new ArrayList<>(pseudo.size());
-        for (Move m : pseudo) {
+        for (Move move : pseudo) {
             Board copyBoard = board.copy();
-            copyBoard.doMove(m);
+            copyBoard.doMove(move);
             if (!isInCheck(copyBoard, colorSide))
-                legal.add(m);
+                legal.add(move);
         }
         return legal;
     }
@@ -99,7 +99,7 @@ public final class RuleSet {
             if (from.getRank() == start) {
                 int newRank2 = from.getRank() + 2 * dir;
                 if (board.pieceAt(Position.of(newRank2, from.getFile())).isEmpty())
-                    moves.add(Move.quiet(from, Position.of(newRank2, from.getFile())));
+                    moves.add(Move.quiet(from, Position.of(newRank2, from.getFile()), board.pieceAt(from).get()));
             }
         }
         for (int df : new int[] { -1, 1 }) {
@@ -111,7 +111,7 @@ public final class RuleSet {
             if (opposingPiece.isPresent() && opposingPiece.get().getColor() != colorSide)
                 addPawn(moves, from, to, colorSide, opposingPiece.get());
             if (enPassant != null && to.equals(enPassant)) {
-                moves.add(Move.enPassant(from, to, board.pieceAt(enPassant).orElse(null)));
+                moves.add(Move.enPassant(from, to, board.pieceAt(enPassant).get(), board.pieceAt(from).get()));
             }
         }
         return moves;
@@ -121,12 +121,14 @@ public final class RuleSet {
         if (to.getRank() == 0 || to.getRank() == 7) {
             for (PieceType pr : new PieceType[] { PieceType.QUEEN, PieceType.ROOK, PieceType.BISHOP, PieceType.KNIGHT })
                 if (capture != null) {
-                    moves.add(new Move(from, to, capture, Piece.of(colorSide, pr), false, false));
+                    moves.add(new Move(from, to, capture, Piece.of(colorSide, pr), false, false,
+                            Piece.of(colorSide, pr)));
                 } else {
-                    moves.add(Move.promotion(from, to, Piece.of(colorSide, pr)));
+                    moves.add(Move.promotion(from, to, Piece.of(colorSide, pr), Piece.of(colorSide, pr)));
                 }
         } else {
-            moves.add(capture != null ? Move.capture(from, to, capture) : Move.quiet(from, to));
+            moves.add(capture != null ? Move.capture(from, to, capture, Piece.of(colorSide, PieceType.PAWN))
+                    : Move.quiet(from, to, Piece.of(colorSide, PieceType.PAWN)));
         }
     }
 
@@ -153,9 +155,9 @@ public final class RuleSet {
             Position to = Position.of(rankTrajectory, fileTrajectory);
             Optional<Piece> opposingPiece = board.pieceAt(to);
             if (opposingPiece.isEmpty())
-                moves.add(Move.quiet(from, to));
+                moves.add(Move.quiet(from, to, board.pieceAt(from).get()));
             else if (opposingPiece.get().getColor() != colorSide)
-                moves.add(Move.capture(from, to, opposingPiece.orElse(null)));
+                moves.add(Move.capture(from, to, opposingPiece.orElse(null), board.pieceAt(from).get()));
         }
         return moves;
     }
@@ -179,10 +181,10 @@ public final class RuleSet {
                 Position to = Position.of(rank, file);
                 Optional<Piece> opposingPiece = board.pieceAt(to);
                 if (opposingPiece.isEmpty())
-                    moves.add(Move.quiet(from, to));
+                    moves.add(Move.quiet(from, to, board.pieceAt(from).get()));
                 else {
                     if (opposingPiece.get().getColor() != colorSide)
-                        moves.add(Move.capture(from, to, opposingPiece.orElse(null)));
+                        moves.add(Move.capture(from, to, opposingPiece.orElse(null), board.pieceAt(from).get()));
                     break;
                 }
             }
@@ -204,7 +206,7 @@ public final class RuleSet {
                     && board.pieceAt(Position.of(rank, 6)).isEmpty()
                     && !isSquareAttacked(board, Position.of(rank, 5), colorSide.opposite())
                     && !isSquareAttacked(board, Position.of(rank, 6), colorSide.opposite())) {
-                moves.add(Move.castle(king, Position.of(rank, 6)));
+                moves.add(Move.castle(king, Position.of(rank, 6), board.pieceAt(king).get()));
             }
             // Queenside
             if (qs && board.pieceAt(Position.of(rank, 3)).isEmpty()
@@ -212,7 +214,7 @@ public final class RuleSet {
                     && board.pieceAt(Position.of(rank, 1)).isEmpty()
                     && !isSquareAttacked(board, Position.of(rank, 3), colorSide.opposite())
                     && !isSquareAttacked(board, Position.of(rank, 2), colorSide.opposite())) {
-                moves.add(Move.castle(king, Position.of(rank, 2)));
+                moves.add(Move.castle(king, Position.of(rank, 2), board.pieceAt(king).get()));
             }
         }
         return moves;
