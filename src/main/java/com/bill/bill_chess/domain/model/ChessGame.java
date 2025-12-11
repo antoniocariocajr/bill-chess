@@ -25,9 +25,6 @@ public class ChessGame {
 
     private Board board;
 
-    // private Player whitePlayer;
-    // private Player blackPlayer;
-
     @Builder.Default
     private Color activeColor = Color.WHITE;
 

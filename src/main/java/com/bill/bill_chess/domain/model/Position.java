@@ -1,14 +1,6 @@
 package com.bill.bill_chess.domain.model;
 
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-
-@AllArgsConstructor
-@Getter
-public class Position {
-    private final int rank; // 0-7
-    private final int file; // 0-7 (a-h)
-
+public record Position(int rank, int file) {
     public static Position fromNotation(String notation) {
         if (notation == null || notation.length() != 2) {
             throw new IllegalArgumentException("Invalid notation: " + notation);
@@ -20,7 +12,7 @@ public class Position {
         int file = fileChar - 'a';
         int rank = Character.getNumericValue(rankChar);
 
-        if (file < 0 || file > 7 || rank < 0 || rank > 7) {
+        if (file < 0 || file > 7 || rank < 1 || rank > 8) {
             throw new IllegalArgumentException("Invalid notation: " + notation);
         }
 
@@ -31,17 +23,14 @@ public class Position {
         return new Position(rank, file);
     }
 
+    public static boolean isValid(int rank, int file) {
+        return rank >= 1 && rank <= 8 && file >= 0 && file <= 7;
+    }
+
     public String toNotation() {
         char fileChar = (char) ('a' + file);
         return "" + fileChar + rank;
     }
 
-    public boolean isValid() {
-        return rank >= 0 && rank <= 7 && file >= 0 && file <= 7;
-    }
-
-    public static boolean isValid(int rank, int file) {
-        return rank >= 0 && rank <= 7 && file >= 0 && file <= 7;
-    }
 
 }

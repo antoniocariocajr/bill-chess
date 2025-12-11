@@ -17,16 +17,18 @@ public final class RuleSet {
     }
 
     /* ================== API pública ================== */
-    public static List<Move> generateLegal(Board board, Color colorSide, Set<CastleRight> rights,
-            Position enPassant) {
+    public static List<Move> generateLegal(Board board
+            , Color colorSide
+            , Set<CastleRight> rights
+            , Position enPassant) {
 
         List<Move> pseudo = new ArrayList<>(100);
         // 1) Movimentos normais + capturas
-        for (int rank = 0; rank < 8; rank++)
+        for (int rank = 1; rank < 9; rank++)
             for (int file = 0; file < 8; file++) {
                 Position position = Position.of(rank, file);
                 board.pieceAt(position).ifPresent(piece -> {
-                    if (piece.getColor() == colorSide) {
+                    if (piece.color() == colorSide) {
                         pseudo.addAll(pseudoMoves(board, position, piece, enPassant));
                     }
                 });
@@ -36,7 +38,7 @@ public final class RuleSet {
         // 3) Filtra xeque
         List<Move> legal = new ArrayList<>(pseudo.size());
         for (Move move : pseudo) {
-            Board copyBoard = board.copy();
+            Board copyBoard = Board.copy(board);
             copyBoard.doMove(move);
             if (!isInCheck(copyBoard, colorSide))
                 legal.add(move);
@@ -46,12 +48,12 @@ public final class RuleSet {
 
     public static boolean isInCheck(Board board, Color colorSide) {
         Position kingPosition = null;
-        outer: for (int rank = 0; rank < 8; rank++)
+        outer: for (int rank = 1; rank < 9; rank++)
             for (int file = 0; file < 8; file++) {
                 Position position = Position.of(rank, file);
                 Optional<Piece> optPiece = board.pieceAt(position);
-                if (optPiece.isPresent() && optPiece.get().getType() == PieceType.KING
-                        && optPiece.get().getColor() == colorSide) {
+                if (optPiece.isPresent() && optPiece.get().isKing()
+                        && optPiece.get().color() == colorSide) {
                     kingPosition = position;
                     break outer;
                 }
@@ -67,7 +69,7 @@ public final class RuleSet {
         List<Move> legal = generateLegal(board, colorSide, rights, enPassant);
         if (legal.isEmpty()) {
             if (isInCheck(board, colorSide))
-                return colorSide == Color.WHITE ? GameStatus.BLACK_WINS : GameStatus.WHITE_WINS;
+                return colorSide.isWhite()? GameStatus.BLACK_WINS : GameStatus.WHITE_WINS;
             return GameStatus.STALEMATE;
         }
         return GameStatus.IN_PROGRESS;
@@ -76,8 +78,8 @@ public final class RuleSet {
     /* ================== Implementações ================== */
     private static List<Move> pseudoMoves(Board board, Position from, Piece piece, Position enPassant) {
         List<Move> list = new ArrayList<>(28);
-        Color colorSide = piece.getColor();
-        switch (piece.getType()) {
+        Color colorSide = piece.color();
+        switch (piece.type()) {
             case PAWN -> list.addAll(pawnMoves(board, from, colorSide, enPassant));
             case KNIGHT -> list.addAll(knightMoves(board, from, colorSide));
             case BISHOP -> list.addAll(sliding(board, from, colorSide, bishopDirs));
@@ -90,35 +92,36 @@ public final class RuleSet {
 
     private static List<Move> pawnMoves(Board board, Position from, Color colorSide, Position enPassant) {
         List<Move> moves = new ArrayList<>(8);
-        int dir = colorSide == Color.WHITE ? 1 : -1;
-        int start = colorSide == Color.WHITE ? 1 : 6;
-        int newRank = from.getRank() + dir;
-        if (Position.isValid(newRank, from.getFile())
-                && board.pieceAt(Position.of(newRank, from.getFile())).isEmpty()) {
-            addPawn(moves, from, Position.of(newRank, from.getFile()), colorSide, null);
-            if (from.getRank() == start) {
-                int newRank2 = from.getRank() + 2 * dir;
-                if (board.pieceAt(Position.of(newRank2, from.getFile())).isEmpty())
-                    moves.add(Move.quiet(from, Position.of(newRank2, from.getFile()), board.pieceAt(from).get()));
+        int dir = colorSide.isWhite()? 1 : -1;
+        int start = colorSide.isWhite() ? 2 : 7;
+        int newRank = from.rank() + dir;
+        if (Position.isValid(newRank, from.file())
+                && board.pieceAt(Position.of(newRank, from.file())).isEmpty()) {
+            addPawn(moves, from, Position.of(newRank, from.file()), colorSide, null);
+            if (from.rank() == start) {
+                int newRank2 = from.rank() + 2 * dir;
+                if (board.pieceAt(Position.of(newRank2, from.file())).isEmpty())
+                    moves.add(Move.quiet(from, Position.of(newRank2, from.file()), board.pieceAt(from).orElse(null)));
             }
         }
         for (int df : new int[] { -1, 1 }) {
-            int newFile = from.getFile() + df;
+            int newFile = from.file() + df;
             if (!Position.isValid(newRank, newFile))
                 continue;
             Position to = Position.of(newRank, newFile);
             Optional<Piece> opposingPiece = board.pieceAt(to);
-            if (opposingPiece.isPresent() && opposingPiece.get().getColor() != colorSide)
+            if (opposingPiece.isPresent() && opposingPiece.get().color() != colorSide)
                 addPawn(moves, from, to, colorSide, opposingPiece.get());
-            if (enPassant != null && to.equals(enPassant)) {
-                moves.add(Move.enPassant(from, to, board.pieceAt(enPassant).get(), board.pieceAt(from).get()));
+            if (to.equals(enPassant)) {
+                moves.add(Move.enPassant(from, to, board.pieceAt(enPassant).orElse(null)
+                                                , board.pieceAt(from).orElse(null)));
             }
         }
         return moves;
     }
 
     private static void addPawn(List<Move> moves, Position from, Position to, Color colorSide, Piece capture) {
-        if (to.getRank() == 0 || to.getRank() == 7) {
+        if (to.rank() == 1 || to.rank() == 8) {
             for (PieceType pr : new PieceType[] { PieceType.QUEEN, PieceType.ROOK, PieceType.BISHOP, PieceType.KNIGHT })
                 if (capture != null) {
                     moves.add(new Move(from, to, capture, Piece.of(colorSide, pr), false, false,
@@ -148,16 +151,16 @@ public final class RuleSet {
             int[] fileDirection) {
         List<Move> moves = new ArrayList<>(rankDirection.length);
         for (int i = 0; i < rankDirection.length; i++) {
-            int rankTrajectory = from.getRank() + rankDirection[i];
-            int fileTrajectory = from.getFile() + fileDirection[i];
+            int rankTrajectory = from.rank() + rankDirection[i];
+            int fileTrajectory = from.file() + fileDirection[i];
             if (!Position.isValid(rankTrajectory, fileTrajectory))
                 continue;
             Position to = Position.of(rankTrajectory, fileTrajectory);
             Optional<Piece> opposingPiece = board.pieceAt(to);
             if (opposingPiece.isEmpty())
-                moves.add(Move.quiet(from, to, board.pieceAt(from).get()));
-            else if (opposingPiece.get().getColor() != colorSide)
-                moves.add(Move.capture(from, to, opposingPiece.orElse(null), board.pieceAt(from).get()));
+                moves.add(Move.quiet(from, to, board.pieceAt(from).orElse(null)));
+            else if (opposingPiece.get().color() != colorSide)
+                moves.add(Move.capture(from, to, opposingPiece.orElse(null), board.pieceAt(from).orElse(null)));
         }
         return moves;
     }
@@ -172,7 +175,7 @@ public final class RuleSet {
     private static List<Move> sliding(Board board, Position from, Color colorSide, int[][] directions) {
         List<Move> moves = new ArrayList<>(28);
         for (int[] direction : directions) {
-            int rank = from.getRank(), file = from.getFile();
+            int rank = from.rank(), file = from.file();
             while (true) {
                 rank += direction[0];
                 file += direction[1];
@@ -181,10 +184,10 @@ public final class RuleSet {
                 Position to = Position.of(rank, file);
                 Optional<Piece> opposingPiece = board.pieceAt(to);
                 if (opposingPiece.isEmpty())
-                    moves.add(Move.quiet(from, to, board.pieceAt(from).get()));
+                    moves.add(Move.quiet(from, to, board.pieceAt(from).orElse(null)));
                 else {
-                    if (opposingPiece.get().getColor() != colorSide)
-                        moves.add(Move.capture(from, to, opposingPiece.orElse(null), board.pieceAt(from).get()));
+                    if (opposingPiece.get().color() != colorSide)
+                        moves.add(Move.capture(from, to, opposingPiece.orElse(null), board.pieceAt(from).orElse(null)));
                     break;
                 }
             }
@@ -198,7 +201,7 @@ public final class RuleSet {
                 : rights.contains(CastleRight.BLACK_KINGSIDE);
         boolean qs = colorSide == Color.WHITE ? rights.contains(CastleRight.WHITE_QUEENSIDE)
                 : rights.contains(CastleRight.BLACK_QUEENSIDE);
-        int rank = colorSide == Color.WHITE ? 0 : 7;
+        int rank = colorSide == Color.WHITE ? 1 : 8;
         Position king = Position.of(rank, 4);
         if (!isInCheck(board, colorSide)) {
             // Kingside
@@ -206,7 +209,7 @@ public final class RuleSet {
                     && board.pieceAt(Position.of(rank, 6)).isEmpty()
                     && !isSquareAttacked(board, Position.of(rank, 5), colorSide.opposite())
                     && !isSquareAttacked(board, Position.of(rank, 6), colorSide.opposite())) {
-                moves.add(Move.castle(king, Position.of(rank, 6), board.pieceAt(king).get()));
+                moves.add(Move.castle(king, Position.of(rank, 6), board.pieceAt(king).orElse(null)));
             }
             // Queenside
             if (qs && board.pieceAt(Position.of(rank, 3)).isEmpty()
@@ -214,7 +217,7 @@ public final class RuleSet {
                     && board.pieceAt(Position.of(rank, 1)).isEmpty()
                     && !isSquareAttacked(board, Position.of(rank, 3), colorSide.opposite())
                     && !isSquareAttacked(board, Position.of(rank, 2), colorSide.opposite())) {
-                moves.add(Move.castle(king, Position.of(rank, 2), board.pieceAt(king).get()));
+                moves.add(Move.castle(king, Position.of(rank, 2), board.pieceAt(king).orElse(null)));
             }
         }
         return moves;
@@ -222,36 +225,36 @@ public final class RuleSet {
 
     private static boolean isSquareAttacked(Board board, Position square, Color colorOpponent) {
         // Pawn
-        int direction = colorOpponent == Color.WHITE ? -1 : 1;
+        int direction = colorOpponent.isWhite() ? -1 : 1;
         for (int fileDirection : new int[] { -1, 1 }) {
-            int pseudoRank = square.getRank() + direction, pseudoFile = square.getFile() + fileDirection;
+            int pseudoRank = square.rank() + direction, pseudoFile = square.file() + fileDirection;
             if (Position.isValid(pseudoRank, pseudoFile)) {
                 Optional<Piece> piece = board.pieceAt(Position.of(pseudoRank, pseudoFile));
                 if (piece.isPresent())
-                    if (piece.get().getType() == PieceType.PAWN && piece.get().getColor() == colorOpponent)
+                    if (piece.get().isPawn() && piece.get().color() == colorOpponent)
                         return true;
             }
         }
         // Knight
         for (Move mv : knightMoves(board, square, colorOpponent)) {
-            Optional<Piece> piece = board.pieceAt(Position.fromNotation(mv.getTo()));
+            Optional<Piece> piece = board.pieceAt(mv.to());
             if (piece.isPresent())
-                if (piece.get().getType() == PieceType.KNIGHT && piece.get().getColor() == colorOpponent)
+                if (piece.get().isKnight() && piece.get().color() == colorOpponent)
                     return true;
         }
         // Sliding (Bishop, Rook, Queen)
         for (int[] d : queenDirs) {
-            int pseudoRank = square.getRank() + d[0], pseudoFile = square.getFile() + d[1];
+            int pseudoRank = square.rank() + d[0], pseudoFile = square.file() + d[1];
             while (Position.isValid(pseudoRank, pseudoFile)) {
                 Position to = Position.of(pseudoRank, pseudoFile);
                 Optional<Piece> opposingPiece = board.pieceAt(to);
                 if (opposingPiece.isPresent()) {
                     Piece piece = opposingPiece.get();
-                    if (piece.getColor() == colorOpponent) {
-                        if ((piece.getType() == PieceType.BISHOP || piece.getType() == PieceType.QUEEN)
+                    if (piece.color() == colorOpponent) {
+                        if ((piece.isBishop() || piece.isQueen())
                                 && (d[0] != 0 && d[1] != 0))
                             return true;
-                        if ((piece.getType() == PieceType.ROOK || piece.getType() == PieceType.QUEEN)
+                        if ((piece.isRook() || piece.isQueen())
                                 && (d[0] == 0 || d[1] == 0))
                             return true;
                     }
@@ -263,9 +266,9 @@ public final class RuleSet {
         }
         // King
         for (Move move : kingMoves(board, square, colorOpponent)) {
-            Optional<Piece> piece = board.pieceAt(Position.fromNotation(move.getTo()));
+            Optional<Piece> piece = board.pieceAt(move.to());
             if (piece.isPresent())
-                if (piece.get().getType() == PieceType.KING && piece.get().getColor() == colorOpponent)
+                if (piece.get().isKing() && piece.get().color() == colorOpponent)
                     return true;
         }
         return false;

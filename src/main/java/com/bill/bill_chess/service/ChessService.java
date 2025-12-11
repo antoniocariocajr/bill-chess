@@ -1,9 +1,11 @@
 package com.bill.bill_chess.service;
 
+import com.bill.bill_chess.core.MoveEngine;
+import com.bill.bill_chess.exception.ChessEngineException;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.server.ResponseStatusException;
 
 import com.bill.bill_chess.core.ChessMapper;
@@ -23,16 +25,24 @@ import com.bill.bill_chess.persistence.ChessRepository;
 
 import lombok.RequiredArgsConstructor;
 
+import java.time.Duration;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.*;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class ChessService {
 
     private final ChessRepository chessRepository;
     private final ChessMapper chessMapper;
-    private final WebClient stockfish = WebClient.create("https://stockfish.online");
+    private final MoveEngine localEngine;
+    private final ExecutorService executor = Executors.newCachedThreadPool(r -> {
+        Thread t = new Thread(r, "stockfish-bot");
+        t.setDaemon(true);
+        return t;
+    });
 
     /* ---------- Criar nova partida ---------- */
     @Transactional
@@ -54,21 +64,27 @@ public class ChessService {
 
         // 3) validações
         validateTurn(dto, game.getActiveColor());
-        Move move = Move.fromUci(dto.uci());
+        System.out.println("passou validação turno");
+        System.out.println(dto.uci());
+        Move m = Move.fromUci(dto.uci());
+        Move move = Move.quiet(m.from()
+                ,m.to()
+                ,game.getBoard().pieceAt(m.from())
+                        .orElseThrow(()->new ResponseStatusException(HttpStatus.NOT_FOUND)));
         validateLegality(game.getBoard(), move, game.getActiveColor(), game.getCastleRights(), game.getEnPassant());
-
+        System.out.println("passou da validação");
         // 4) executa o lance
         game.getBoard().doMove(move);
         game.setCastleRights(updateCastlingRights(game.getCastleRights(), move));
         game.setEnPassant(updateEnPassant(game.getBoard(), move));
         game.setActiveColor(game.getActiveColor().opposite());
-        if (move.getPieceMoved().isPawn()) {
+        if (move.pieceMoved().isPawn()) {
             game.setHalfMoveClock(0);
         } else {
             int half = move.captured().isPresent() ? 0 : entity.halfMoveClock() + 1;
             game.setHalfMoveClock(half);
         }
-        int full = game.getActiveColor() == Color.WHITE ? entity.fullMoveNumber() + 1 : entity.fullMoveNumber();
+        int full = game.getActiveColor().isWhite() ? entity.fullMoveNumber() + 1 : entity.fullMoveNumber();
         game.setFullMoveNumber(full);
         // 5) status final
         GameStatus status = RuleSet.classify(game.getBoard(), game.getActiveColor(), game.getCastleRights(),
@@ -100,19 +116,22 @@ public class ChessService {
         }
 
         // 3) asks the engine
-        String uci = askEngine(entity.toFen(), depth);
+        String uci = botMove(entity.toFen(), depth);
 
         // 4) reuses the existing flow
-        return makeMove(gameId, new MoveDto(game.getPlayerBotColor().name(), uci));
+        return makeMove(gameId, new MoveDto(game.getPlayerBotColor().fen(), uci));
     }
 
-    public LegalMovesDto getLegalMoves(String gameId) {
+    public LegalMovesDto getLegalMoves(String gameId, String square) {
+        Position position = Position.fromNotation(square);
         ChessEntity entity = chessRepository.findById(gameId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Game not found"));
         ChessGame game = chessMapper.toDomain(entity);
         List<String> moves = RuleSet
                 .generateLegal(game.getBoard(), game.getActiveColor(), game.getCastleRights(), game.getEnPassant())
-                .stream().map(Move::toUci).toList();
+                .stream()
+                .filter(move -> move.from().toNotation().equals(position.toNotation()))
+                .map(Move::toUci).toList();
         return new LegalMovesDto(moves);
     }
 
@@ -132,6 +151,7 @@ public class ChessService {
         boolean legal = RuleSet.generateLegal(board, active, rights, enPassant)
                 .stream()
                 .anyMatch(m -> m.equals(move));
+        System.out.println("aqui->"+legal+" "+move.toUci());
         if (!legal)
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Illegal move: " + move.toUci());
     }
@@ -139,39 +159,39 @@ public class ChessService {
     /* ---------- Atualiza direitos de roque ---------- */
     private Set<CastleRight> updateCastlingRights(Set<CastleRight> current, Move move) {
         // rei move → perde tudo daquela cor
-        if (move.getPieceMoved().isKing()) {
-            current.remove(move.getPieceMoved().getColor() == Color.WHITE ? CastleRight.WHITE_KINGSIDE
+        if (move.pieceMoved().isKing()) {
+            current.remove(move.pieceMoved().isWhite() ? CastleRight.WHITE_KINGSIDE
                     : CastleRight.BLACK_KINGSIDE);
-            current.remove(move.getPieceMoved().getColor() == Color.WHITE ? CastleRight.WHITE_QUEENSIDE
+            current.remove(move.pieceMoved().isWhite()? CastleRight.WHITE_QUEENSIDE
                     : CastleRight.BLACK_QUEENSIDE);
             return current;
         }
         // torre move → perde só o lado correspondente
-        if (move.getPieceMoved().isRook()) {
-            Position from = Position.fromNotation(move.getFrom());
-            int rank = from.getRank();
-            Color cor = move.getPieceMoved().getColor();
-            if (from.getFile() == 7 && rank == (cor == Color.WHITE ? 0 : 7)) {
-                current.remove(move.getPieceMoved().getColor() == Color.WHITE ? CastleRight.WHITE_KINGSIDE
+        if (move.pieceMoved().isRook()) {
+            Position from = move.from();
+            int rank = from.rank();
+            Color cor = move.pieceMoved().color();
+            if (from.file() == 7 && rank == (cor.isWhite()? 1 : 8)) {
+                current.remove(move.pieceMoved().isWhite() ? CastleRight.WHITE_KINGSIDE
                         : CastleRight.BLACK_KINGSIDE);
             }
-            if (from.getFile() == 0 && rank == (cor == Color.WHITE ? 0 : 7)) {
-                current.remove(move.getPieceMoved().getColor() == Color.WHITE ? CastleRight.WHITE_QUEENSIDE
+            if (from.file() == 0 && rank == (cor.isWhite() ? 1 : 8)) {
+                current.remove(move.pieceMoved().isWhite()? CastleRight.WHITE_QUEENSIDE
                         : CastleRight.BLACK_QUEENSIDE);
             }
             return current;
         }
         // captura de torre no canto → também perde o lado
         if (move.captured().isPresent() && move.captured().get().isRook()) {
-            Position to = Position.fromNotation(move.getTo());
-            int rank = to.getRank();
-            Color cor = move.captured().get().getColor();
-            if (to.getFile() == 7 && rank == (cor == Color.WHITE ? 0 : 7)) {
-                current.remove(move.getPieceMoved().getColor() == Color.WHITE ? CastleRight.WHITE_KINGSIDE
+            Position to = move.to();
+            int rank = to.rank();
+            Color cor = move.captured().get().color();
+            if (to.file() == 7 && rank == (cor.isWhite() ? 1 : 8)) {
+                current.remove(move.pieceMoved().isWhite() ? CastleRight.WHITE_KINGSIDE
                         : CastleRight.BLACK_KINGSIDE);
             }
-            if (to.getFile() == 0 && rank == (cor == Color.WHITE ? 0 : 7)) {
-                current.remove(move.getPieceMoved().getColor() == Color.WHITE ? CastleRight.WHITE_QUEENSIDE
+            if (to.file() == 0 && rank == (cor.isWhite() ? 1 : 8)) {
+                current.remove(move.pieceMoved().isWhite() ? CastleRight.WHITE_QUEENSIDE
                         : CastleRight.BLACK_QUEENSIDE);
             }
         }
@@ -181,27 +201,36 @@ public class ChessService {
     /* ---------- En-passant ---------- */
     private Position updateEnPassant(Board board, Move move) {
         // só peão que andou 2 casas gera EP
-        if (!move.getPieceMoved().isPawn())
+        if (!move.pieceMoved().isPawn())
             return null;
-        Position from = Position.fromNotation(move.getFrom());
-        Position to = Position.fromNotation(move.getTo());
-        int dr = Math.abs(to.getRank() - from.getRank());
+        Position from = move.from();
+        Position to = move.to();
+        int dr = Math.abs(to.rank() - from.rank());
         if (dr == 2) {
-            return Position.of((from.getRank() + to.getRank()) / 2, from.getFile());
+            return Position.of((from.rank() + to.rank()) / 2, from.file());
         }
         return null;
     }
 
-    /* ---------- consulta motor ---------- */
-    private String askEngine(String fen, int depth) {
-        return stockfish.get()
-                .uri(b -> b.path("/api/stockfish.php")
-                        .queryParam("fen", fen)
-                        .queryParam("depth", depth)
-                        .build())
-                .retrieve()
-                .bodyToMono(String.class)
-                .block(); // ex: "e2e4"
+    private String botMove(String fen, int depth) {
+        try {
+            return executor
+                    .submit(() -> localEngine.bestMove(fen, depth)
+                            .timeout(Duration.ofSeconds(5))
+                            .doOnError(err -> log.error("Stockfish falhou", err))
+                            .block())   // timeout já configurado no Mono
+                    .get(6, TimeUnit.SECONDS);      // timeout total (executor + block)
+        } catch (TimeoutException tex) {
+            throw new ChessEngineException("Tempo esgotado ao calcular movimento", tex);
+        } catch (InterruptedException ie) {
+            Thread.currentThread().interrupt();
+            throw new ChessEngineException("Interrompido", ie);
+        } catch (ExecutionException e) {
+            /* ---------- AQUI: imprima a causa real ---------- */
+            Throwable root = e.getCause();
+            root.printStackTrace();           // log temporário
+            throw new ChessEngineException(root.getMessage(), root);
+        }
     }
 
 }

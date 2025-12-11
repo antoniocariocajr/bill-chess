@@ -1,6 +1,7 @@
 package com.bill.bill_chess.persistence;
 
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.List;
 
 import org.springframework.data.annotation.Id;
@@ -34,8 +35,11 @@ public record ChessEntity(
                                 "w", "b", "KQkq", "-", 0, 1,
                                 false,
                                 "IN_PROGRESS",
-                                List.of(),
+                                new ArrayList<>(),
                                 Instant.now(),
                                 Instant.now());
+        }
+        public boolean isTurnBot(){
+            return activeColor().equals(playerBotColor());
         }
 }

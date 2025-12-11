@@ -1,5 +1,8 @@
 package com.bill.bill_chess.domain.enums;
 
+import lombok.Getter;
+
+@Getter
 public enum CastleRight {
     WHITE_KINGSIDE("K"), // Roque pequeno branco
     WHITE_QUEENSIDE("Q"), // Roque grande branco
@@ -12,7 +15,4 @@ public enum CastleRight {
         this.fenSymbol = fenSymbol;
     }
 
-    public String getFenSymbol() {
-        return this.fenSymbol;
-    }
 }

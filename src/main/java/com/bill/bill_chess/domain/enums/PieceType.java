@@ -13,5 +13,5 @@ public enum PieceType {
     QUEEN("Q"),
     KING("K");
 
-    private final String unicode;
+    private final String name;
 }
