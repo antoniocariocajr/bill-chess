@@ -1,12 +1,11 @@
 package com.bill.bill_chess.service;
 
+import com.bill.bill_chess.core.GameConstants;
 import com.bill.bill_chess.core.MoveEngine;
-import com.bill.bill_chess.exception.ChessEngineException;
+import com.bill.bill_chess.exception.*;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.server.ResponseStatusException;
 
 import com.bill.bill_chess.core.ChessMapper;
 import com.bill.bill_chess.core.RuleSet;
@@ -23,26 +22,29 @@ import com.bill.bill_chess.dto.MoveDto;
 import com.bill.bill_chess.persistence.ChessEntity;
 import com.bill.bill_chess.persistence.ChessRepository;
 
-import lombok.RequiredArgsConstructor;
-
 import java.time.Duration;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.*;
 
 @Service
-@RequiredArgsConstructor
 @Slf4j
 public class ChessService {
 
     private final ChessRepository chessRepository;
     private final ChessMapper chessMapper;
     private final MoveEngine localEngine;
-    private final ExecutorService executor = Executors.newCachedThreadPool(r -> {
-        Thread t = new Thread(r, "stockfish-bot");
-        t.setDaemon(true);
-        return t;
-    });
+    private final ExecutorService stockfishExecutor;
+
+    public ChessService(ChessRepository chessRepository,
+            ChessMapper chessMapper,
+            MoveEngine localEngine,
+            ExecutorService stockfishExecutor) {
+        this.chessRepository = chessRepository;
+        this.chessMapper = chessMapper;
+        this.localEngine = localEngine;
+        this.stockfishExecutor = stockfishExecutor;
+    }
 
     /* ---------- Criar nova partida ---------- */
     @Transactional
@@ -57,22 +59,22 @@ public class ChessService {
     public GameStateDto makeMove(String gameId, MoveDto dto) {
         // 1) busca
         ChessEntity entity = chessRepository.findById(gameId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Game not found"));
+                .orElseThrow(() -> new GameNotFoundException(GameConstants.GAME_NOT_FOUND_MSG));
 
         // 2) converte para objetos de domínio
         ChessGame game = chessMapper.toDomain(entity);
 
         // 3) validações
         validateTurn(dto, game.getActiveColor());
-        System.out.println("passou validação turno");
-        System.out.println(dto.uci());
+        log.debug("Turn validation passed");
+        log.debug("UCI: {}", dto.uci());
+
         Move m = Move.fromUci(dto.uci());
-        Move move = Move.quiet(m.from()
-                ,m.to()
-                ,game.getBoard().pieceAt(m.from())
-                        .orElseThrow(()->new ResponseStatusException(HttpStatus.NOT_FOUND)));
+        Move move = Move.quiet(m.from(), m.to(), game.getBoard().pieceAt(m.from())
+                .orElseThrow(() -> new GameNotFoundException("Piece not found at source square")));
         validateLegality(game.getBoard(), move, game.getActiveColor(), game.getCastleRights(), game.getEnPassant());
-        System.out.println("passou da validação");
+        log.debug("Legality validation passed");
+
         // 4) executa o lance
         game.getBoard().doMove(move);
         game.setCastleRights(updateCastlingRights(game.getCastleRights(), move));
@@ -106,17 +108,17 @@ public class ChessService {
     public GameStateDto makeBotMove(String gameId, int depth) {
         // 1) current state
         ChessEntity entity = chessRepository.findById(gameId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Game not found"));
+                .orElseThrow(() -> new GameNotFoundException(GameConstants.GAME_NOT_FOUND_MSG));
 
         ChessGame game = chessMapper.toDomain(entity);
 
         // 2) only plays if it is the bot's turn
         if (game.getPlayerBotColor() != game.getActiveColor()) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Not bot turn");
+            throw new InvalidTurnException(GameConstants.NOT_BOT_TURN_MSG);
         }
 
         // 3) asks the engine
-        String uci = botMove(entity.toFen(), depth);
+        String uci = botMove(entity.toFen(), depth <= 0 ? GameConstants.DEFAULT_DEPTH : depth);
 
         // 4) reuses the existing flow
         return makeMove(gameId, new MoveDto(game.getPlayerBotColor().fen(), uci));
@@ -125,7 +127,7 @@ public class ChessService {
     public LegalMovesDto getLegalMoves(String gameId, String square) {
         Position position = Position.fromNotation(square);
         ChessEntity entity = chessRepository.findById(gameId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Game not found"));
+                .orElseThrow(() -> new GameNotFoundException(GameConstants.GAME_NOT_FOUND_MSG));
         ChessGame game = chessMapper.toDomain(entity);
         List<String> moves = RuleSet
                 .generateLegal(game.getBoard(), game.getActiveColor(), game.getCastleRights(), game.getEnPassant())
@@ -137,13 +139,13 @@ public class ChessService {
 
     public GameStateDto getGame(String gameId) {
         ChessEntity entity = chessRepository.findById(gameId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Game not found"));
+                .orElseThrow(() -> new GameNotFoundException(GameConstants.GAME_NOT_FOUND_MSG));
         return chessMapper.toGameStateDto(entity);
     }
 
     private void validateTurn(MoveDto dto, Color active) {
         if (!dto.color().equalsIgnoreCase(active.fen()))
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Not your turn");
+            throw new InvalidTurnException(GameConstants.NOT_YOUR_TURN_MSG);
     }
 
     private void validateLegality(Board board, Move move, Color active,
@@ -151,9 +153,9 @@ public class ChessService {
         boolean legal = RuleSet.generateLegal(board, active, rights, enPassant)
                 .stream()
                 .anyMatch(m -> m.equals(move));
-        System.out.println("aqui->"+legal+" "+move.toUci());
+        log.debug("Checked legality: {} move={}", legal, move.toUci());
         if (!legal)
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Illegal move: " + move.toUci());
+            throw new IllegalMoveException("Illegal move: " + move.toUci());
     }
 
     /* ---------- Atualiza direitos de roque ---------- */
@@ -162,7 +164,7 @@ public class ChessService {
         if (move.pieceMoved().isKing()) {
             current.remove(move.pieceMoved().isWhite() ? CastleRight.WHITE_KINGSIDE
                     : CastleRight.BLACK_KINGSIDE);
-            current.remove(move.pieceMoved().isWhite()? CastleRight.WHITE_QUEENSIDE
+            current.remove(move.pieceMoved().isWhite() ? CastleRight.WHITE_QUEENSIDE
                     : CastleRight.BLACK_QUEENSIDE);
             return current;
         }
@@ -171,12 +173,12 @@ public class ChessService {
             Position from = move.from();
             int rank = from.rank();
             Color cor = move.pieceMoved().color();
-            if (from.file() == 7 && rank == (cor.isWhite()? 1 : 8)) {
+            if (from.file() == 7 && rank == (cor.isWhite() ? 1 : 8)) {
                 current.remove(move.pieceMoved().isWhite() ? CastleRight.WHITE_KINGSIDE
                         : CastleRight.BLACK_KINGSIDE);
             }
             if (from.file() == 0 && rank == (cor.isWhite() ? 1 : 8)) {
-                current.remove(move.pieceMoved().isWhite()? CastleRight.WHITE_QUEENSIDE
+                current.remove(move.pieceMoved().isWhite() ? CastleRight.WHITE_QUEENSIDE
                         : CastleRight.BLACK_QUEENSIDE);
             }
             return current;
@@ -214,21 +216,20 @@ public class ChessService {
 
     private String botMove(String fen, int depth) {
         try {
-            return executor
+            return stockfishExecutor
                     .submit(() -> localEngine.bestMove(fen, depth)
-                            .timeout(Duration.ofSeconds(5))
-                            .doOnError(err -> log.error("Stockfish falhou", err))
-                            .block())   // timeout já configurado no Mono
-                    .get(6, TimeUnit.SECONDS);      // timeout total (executor + block)
+                            .timeout(Duration.ofSeconds(GameConstants.BOT_TIMEOUT_SECONDS))
+                            .doOnError(err -> log.error("Stockfish failed locally", err))
+                            .block()) // timeout já configurado no Mono
+                    .get(GameConstants.BOT_TIMEOUT_SECONDS, TimeUnit.SECONDS); // timeout total (executor + block)
         } catch (TimeoutException tex) {
-            throw new ChessEngineException("Tempo esgotado ao calcular movimento", tex);
+            throw new ChessEngineException("Time limit exceeded for calculation", tex);
         } catch (InterruptedException ie) {
             Thread.currentThread().interrupt();
-            throw new ChessEngineException("Interrompido", ie);
+            throw new ChessEngineException("Interrupted", ie);
         } catch (ExecutionException e) {
-            /* ---------- AQUI: imprima a causa real ---------- */
             Throwable root = e.getCause();
-            root.printStackTrace();           // log temporário
+            log.error("Stockfish execution error", root);
             throw new ChessEngineException(root.getMessage(), root);
         }
     }
