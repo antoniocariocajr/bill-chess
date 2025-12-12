@@ -17,10 +17,7 @@ public final class RuleSet {
     }
 
     /* ================== API pública ================== */
-    public static List<Move> generateLegal(Board board
-            , Color colorSide
-            , Set<CastleRight> rights
-            , Position enPassant) {
+    public static List<Move> generateLegal(Board board, Color colorSide, Set<CastleRight> rights, Position enPassant) {
 
         List<Move> pseudo = new ArrayList<>(100);
         // 1) Movimentos normais + capturas
@@ -33,6 +30,28 @@ public final class RuleSet {
                     }
                 });
             }
+        // 2) Roques
+        pseudo.addAll(generateCastling(board, colorSide, rights));
+        // 3) Filtra xeque
+        List<Move> legal = new ArrayList<>(pseudo.size());
+        for (Move move : pseudo) {
+            Board copyBoard = Board.copy(board);
+            copyBoard.doMove(move);
+            if (!isInCheck(copyBoard, colorSide))
+                legal.add(move);
+        }
+        return legal;
+    }
+
+    public static List<Move> generateLegalInPosition(Board board, Color colorSide, Set<CastleRight> rights,
+            Position enPassant, Position position) {
+
+        List<Move> pseudo = new ArrayList<>(100);
+        board.pieceAt(position).ifPresent(piece -> {
+            if (piece.color() == colorSide) {
+                pseudo.addAll(pseudoMoves(board, position, piece, enPassant));
+            }
+        });
         // 2) Roques
         pseudo.addAll(generateCastling(board, colorSide, rights));
         // 3) Filtra xeque
@@ -69,7 +88,7 @@ public final class RuleSet {
         List<Move> legal = generateLegal(board, colorSide, rights, enPassant);
         if (legal.isEmpty()) {
             if (isInCheck(board, colorSide))
-                return colorSide.isWhite()? GameStatus.BLACK_WINS : GameStatus.WHITE_WINS;
+                return colorSide.isWhite() ? GameStatus.BLACK_WINS : GameStatus.WHITE_WINS;
             return GameStatus.STALEMATE;
         }
         return GameStatus.IN_PROGRESS;
@@ -92,7 +111,7 @@ public final class RuleSet {
 
     private static List<Move> pawnMoves(Board board, Position from, Color colorSide, Position enPassant) {
         List<Move> moves = new ArrayList<>(8);
-        int dir = colorSide.isWhite()? 1 : -1;
+        int dir = colorSide.isWhite() ? 1 : -1;
         int start = colorSide.isWhite() ? 2 : 7;
         int newRank = from.rank() + dir;
         if (Position.isValid(newRank, from.file())
@@ -113,8 +132,8 @@ public final class RuleSet {
             if (opposingPiece.isPresent() && opposingPiece.get().color() != colorSide)
                 addPawn(moves, from, to, colorSide, opposingPiece.get());
             if (to.equals(enPassant)) {
-                moves.add(Move.enPassant(from, to, board.pieceAt(enPassant).orElse(null)
-                                                , board.pieceAt(from).orElse(null)));
+                moves.add(Move.enPassant(from, to, board.pieceAt(enPassant).orElse(null),
+                        board.pieceAt(from).orElse(null)));
             }
         }
         return moves;

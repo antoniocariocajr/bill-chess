@@ -1,7 +1,9 @@
-package com.bill.bill_chess.service;   // ou seu package
+package com.bill.bill_chess.service; // ou seu package
 
 import com.bill.bill_chess.config.LocalStockfishProps; // ajuste o import
 import com.bill.bill_chess.core.MoveEngine;
+import com.bill.bill_chess.exception.ChessEngineException;
+
 import jakarta.annotation.PreDestroy;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Primary;
@@ -47,17 +49,17 @@ public class LocalStockfishService implements MoveEngine {
     @Override
     public Mono<String> bestMove(String fen, int depth) {
         return Mono.fromCallable(() -> {
-                    send("position fen " + fen);
-                    send("go depth " + depth);
+            send("position fen " + fen);
+            send("go depth " + depth);
 
-                    String line;
-                    while ((line = reader.readLine()) != null) {
-                        if (line.startsWith("bestmove")) {
-                            return line.split(" ")[1];
-                        }
-                    }
-                    throw new RuntimeException("Nenhum bestmove recebido");
-                })
+            String line;
+            while ((line = reader.readLine()) != null) {
+                if (line.startsWith("bestmove")) {
+                    return line.split(" ")[1];
+                }
+            }
+            throw new ChessEngineException("Nenhum bestmove recebido");
+        })
                 .subscribeOn(Schedulers.boundedElastic())
                 .timeout(Duration.ofSeconds(10));
     }
@@ -70,7 +72,8 @@ public class LocalStockfishService implements MoveEngine {
     private void waitFor(String token) throws IOException {
         String line;
         while ((line = reader.readLine()) != null) {
-            if (line.contains(token)) return;
+            if (line.contains(token))
+                return;
         }
     }
 

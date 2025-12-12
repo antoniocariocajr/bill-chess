@@ -130,9 +130,9 @@ public class ChessService {
                 .orElseThrow(() -> new GameNotFoundException(GameConstants.GAME_NOT_FOUND_MSG));
         ChessGame game = chessMapper.toDomain(entity);
         List<String> moves = RuleSet
-                .generateLegal(game.getBoard(), game.getActiveColor(), game.getCastleRights(), game.getEnPassant())
+                .generateLegalInPosition(game.getBoard(), game.getActiveColor(), game.getCastleRights(),
+                        game.getEnPassant(), position)
                 .stream()
-                .filter(move -> move.from().toNotation().equals(position.toNotation()))
                 .map(Move::toUci).toList();
         return new LegalMovesDto(moves);
     }
