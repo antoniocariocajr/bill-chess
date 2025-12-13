@@ -1,4 +1,4 @@
-package com.bill.bill_chess.core;
+package com.bill.bill_chess.service.mapper;
 
 import java.time.Instant;
 import java.util.*;
@@ -10,7 +10,7 @@ import org.springframework.stereotype.Component;
 
 import com.bill.bill_chess.domain.enums.CastleRight;
 import com.bill.bill_chess.domain.enums.Color;
-import com.bill.bill_chess.dto.GameStateDto;
+import com.bill.bill_chess.controller.dto.GameStateDto;
 import com.bill.bill_chess.persistence.ChessEntity;
 
 @Component

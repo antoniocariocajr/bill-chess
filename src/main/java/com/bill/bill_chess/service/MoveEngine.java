@@ -1,4 +1,4 @@
-package com.bill.bill_chess.core;
+package com.bill.bill_chess.service;
 
 import reactor.core.publisher.Mono;
 

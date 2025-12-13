@@ -3,18 +3,20 @@ package com.bill.bill_chess.controller;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.bill.bill_chess.dto.GameStateDto;
-import com.bill.bill_chess.dto.LegalMovesDto;
-import com.bill.bill_chess.dto.MoveDto;
+import com.bill.bill_chess.controller.dto.GameStateDto;
+import com.bill.bill_chess.controller.dto.LegalMovesDto;
+import com.bill.bill_chess.controller.dto.MoveDto;
 import com.bill.bill_chess.service.ChessService;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.http.HttpStatus;
+import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
@@ -22,6 +24,8 @@ import org.springframework.web.bind.annotation.PathVariable;
 
 @RestController
 @RequestMapping("/api/chess")
+@CrossOrigin(origins = "http://localhost:4200")
+@Tag(name = "Chess", description = "Chess API")
 @RequiredArgsConstructor
 public class ChessController {
 
@@ -58,7 +62,7 @@ public class ChessController {
     })
     @ResponseStatus(HttpStatus.OK)
     public GameStateDto getGame(@PathVariable String id) {
-        return chessService.getGame(id);
+        return chessService.findById(id);
     }
 
     @PostMapping("/{id}/move")
@@ -72,6 +76,31 @@ public class ChessController {
     @ResponseStatus(HttpStatus.OK)
     public GameStateDto move(@PathVariable String id, @RequestBody MoveDto move) {
         return chessService.makeHumanMove(id, move);
+    }
+
+    @PostMapping("/{id}/undo")
+    @Operation(summary = "undo last move")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Move undone successfully"),
+            @ApiResponse(responseCode = "500", description = "Internal server error"),
+            @ApiResponse(responseCode = "404", description = "Game not found")
+    })
+    @ResponseStatus(HttpStatus.OK)
+    public GameStateDto undo(@PathVariable String id) {
+        return chessService.undoMove(id);
+    }
+
+    @PostMapping("/{id}/best-move")
+    @Operation(summary = "get best move")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Best move retrieved successfully"),
+            @ApiResponse(responseCode = "500", description = "Internal server error"),
+            @ApiResponse(responseCode = "404", description = "Game not found")
+    })
+    @ResponseStatus(HttpStatus.OK)
+    public String bestMove(@PathVariable String id,
+            @RequestParam(defaultValue = "10") int depth) {
+        return chessService.getBestMove(id, depth);
     }
 
     @PostMapping("/{id}/bot/move")

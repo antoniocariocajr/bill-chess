@@ -1,8 +1,9 @@
-package com.bill.bill_chess.service; // ou seu package
+package com.bill.bill_chess.service.impl; // ou seu package
 
 import com.bill.bill_chess.infra.stockfish.LocalStockfishProps; // ajuste o import
-import com.bill.bill_chess.exception.ChessEngineException;
+import com.bill.bill_chess.infra.exception.ChessEngineException;
 
+import com.bill.bill_chess.service.MoveEngine;
 import jakarta.annotation.PreDestroy;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Primary;

@@ -38,7 +38,7 @@ public record Move (
         Position to = Position.fromNotation(uci.substring(2, 4));
         if (uci.length() == 5) {
             Piece pr = Piece.fromUnicode(uci.substring(4));
-            return promotion(from, to, pr, null);
+            return promotion(from, to, pr, pr);
         }
         return quiet(from, to, null); // captura/en-passant/castling são descobertos pelo Board
     }

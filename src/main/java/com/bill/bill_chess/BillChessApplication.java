@@ -1,6 +1,6 @@
 package com.bill.bill_chess;
 
-import com.bill.bill_chess.config.LocalStockfishProps;
+import com.bill.bill_chess.infra.stockfish.LocalStockfishProps;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;

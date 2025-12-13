@@ -1,6 +1,6 @@
 package com.bill.bill_chess.domain.model;
 
-import com.bill.bill_chess.exception.InvalidPositionException;
+import com.bill.bill_chess.infra.exception.InvalidPositionException;
 
 public record Position(int rank, int file) {
     public static Position fromNotation(String notation) {

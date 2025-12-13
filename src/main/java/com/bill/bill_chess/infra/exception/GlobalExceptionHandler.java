@@ -1,4 +1,4 @@
-package com.bill.bill_chess.exception;
+package com.bill.bill_chess.infra.exception;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;

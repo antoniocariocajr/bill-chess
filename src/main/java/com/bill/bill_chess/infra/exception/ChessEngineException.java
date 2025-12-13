@@ -1,4 +1,4 @@
-package com.bill.bill_chess.exception;
+package com.bill.bill_chess.infra.exception;
 
 public class ChessEngineException extends RuntimeException {
     public ChessEngineException(String message) {

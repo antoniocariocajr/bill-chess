@@ -16,11 +16,9 @@ public final class RuleSet {
     private RuleSet() {
     }
 
-    /* ================== API pública ================== */
     public static List<Move> generateLegal(Board board, Color colorSide, Set<CastleRight> rights, Position enPassant) {
 
         List<Move> pseudo = new ArrayList<>(100);
-        // 1) Movimentos normais + capturas
         for (int rank = 1; rank < 9; rank++)
             for (int file = 0; file < 8; file++) {
                 Position position = Position.of(rank, file);
@@ -30,9 +28,7 @@ public final class RuleSet {
                     }
                 });
             }
-        // 2) Roques
         pseudo.addAll(generateCastling(board, colorSide, rights));
-        // 3) Filtra xeque
         List<Move> legal = new ArrayList<>(pseudo.size());
         for (Move move : pseudo) {
             Board copyBoard = Board.copy(board);
@@ -52,9 +48,7 @@ public final class RuleSet {
                 pseudo.addAll(pseudoMoves(board, position, piece, enPassant));
             }
         });
-        // 2) Roques
         pseudo.addAll(generateCastling(board, colorSide, rights));
-        // 3) Filtra xeque
         List<Move> legal = new ArrayList<>(pseudo.size());
         for (Move move : pseudo) {
             Board copyBoard = Board.copy(board);
@@ -94,7 +88,6 @@ public final class RuleSet {
         return GameStatus.IN_PROGRESS;
     }
 
-    /* ================== Implementações ================== */
     private static List<Move> pseudoMoves(Board board, Position from, Piece piece, Position enPassant) {
         List<Move> list = new ArrayList<>(28);
         Color colorSide = piece.color();

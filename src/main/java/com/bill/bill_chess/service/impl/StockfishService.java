@@ -1,8 +1,9 @@
-package com.bill.bill_chess.service;
+package com.bill.bill_chess.service.impl;
 
 import com.bill.bill_chess.core.ChessValidation;
 import com.bill.bill_chess.infra.stockfish.StockfishProperties;
-import com.bill.bill_chess.exception.ChessEngineException;
+import com.bill.bill_chess.infra.exception.ChessEngineException;
+import com.bill.bill_chess.service.MoveEngine;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import lombok.extern.slf4j.Slf4j;

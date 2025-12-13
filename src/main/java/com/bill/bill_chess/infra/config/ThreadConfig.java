@@ -1,4 +1,4 @@
-package com.bill.bill_chess.config;
+package com.bill.bill_chess.infra.config;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;

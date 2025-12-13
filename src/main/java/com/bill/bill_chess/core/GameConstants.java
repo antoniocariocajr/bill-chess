@@ -9,4 +9,6 @@ public final class GameConstants {
     public static final String GAME_NOT_FOUND_MSG = "Game or Board not found";
     public static final String NOT_YOUR_TURN_MSG = "It is not your turn";
     public static final String NOT_BOT_TURN_MSG = "It is not the bot's turn";
+    public static final String FEN_INIT = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR";
+    public static final String ISSUER = "chess-bill";
 }
