@@ -1,4 +1,4 @@
-package com.bill.bill_chess.config;
+package com.bill.bill_chess.infra.config;
 
 import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;

@@ -1,7 +1,6 @@
 package com.bill.bill_chess.service; // ou seu package
 
-import com.bill.bill_chess.config.LocalStockfishProps; // ajuste o import
-import com.bill.bill_chess.core.MoveEngine;
+import com.bill.bill_chess.infra.stockfish.LocalStockfishProps; // ajuste o import
 import com.bill.bill_chess.exception.ChessEngineException;
 
 import jakarta.annotation.PreDestroy;
