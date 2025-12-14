@@ -1,10 +1,6 @@
 package com.bill.bill_chess.controller;
 
-import org.springframework.web.bind.annotation.CrossOrigin;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.ResponseStatus;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import com.bill.bill_chess.controller.dto.LoginRequest;
 import com.bill.bill_chess.controller.dto.LoginResponse;
@@ -14,7 +10,6 @@ import com.bill.bill_chess.service.AuthService;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
-import io.swagger.v3.oas.annotations.parameters.RequestBody;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
@@ -24,8 +19,8 @@ import static org.springframework.http.HttpStatus.OK;
 
 @RestController
 @RequestMapping("/auth")
-@CrossOrigin(origins = "http://localhost:4200")
 @Tag(name = "Authentication", description = "Authentication user of the Chess API")
+@CrossOrigin(origins = "http://localhost:4200")
 @RequiredArgsConstructor
 public class AuthController {
 
@@ -50,6 +45,7 @@ public class AuthController {
     })
     @ResponseStatus(OK)
     public LoginResponse login(@RequestBody LoginRequest request) {
+        System.out.println(request);
         return authService.authenticate(request);
     }
 

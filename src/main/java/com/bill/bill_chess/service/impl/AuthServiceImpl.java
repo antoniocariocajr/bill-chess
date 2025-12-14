@@ -42,9 +42,11 @@ public class AuthServiceImpl implements AuthService {
 
     @Override
     public LoginResponse authenticate(LoginRequest loginRequest) {
+        System.out.println("login: "+ loginRequest.email());
         var user = userRepository.findByEmail(loginRequest.email())
                 .orElseThrow(() -> new ResponseStatusException(NOT_FOUND));
         if (isLoginCorrect(loginRequest, user.getPassword())) {
+            System.out.println("verificou a senha");
             return encode(user);
         }
         throw new ResponseStatusException(UNAUTHORIZED,"user or password is invalid!");
@@ -53,7 +55,7 @@ public class AuthServiceImpl implements AuthService {
     @Override
     public LoginResponse encode(User user) {
         var now = Instant.now();
-        var expiresIn = 600L;
+        var expiresIn = 60000L;
         var scopes = user.getRoles()
                 .stream()
                 .map(Enum::name)
