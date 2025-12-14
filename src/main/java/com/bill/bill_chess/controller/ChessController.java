@@ -1,5 +1,6 @@
 package com.bill.bill_chess.controller;
 
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -15,17 +16,20 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.PathVariable;
 
+import static org.springframework.http.HttpStatus.CREATED;
+import static org.springframework.http.HttpStatus.OK;
+
 @RestController
 @RequestMapping("/api/chess")
 @CrossOrigin(origins = "http://localhost:4200")
 @Tag(name = "Chess", description = "Chess API")
+@EnableMethodSecurity
 @RequiredArgsConstructor
 public class ChessController {
 
@@ -37,7 +41,7 @@ public class ChessController {
             @ApiResponse(responseCode = "201", description = "Game initialized successfully"),
             @ApiResponse(responseCode = "500", description = "Internal server error")
     })
-    @ResponseStatus(HttpStatus.CREATED)
+    @ResponseStatus(CREATED)
     public GameStateDto initGame() {
         return chessService.createGame();
     }
@@ -48,7 +52,7 @@ public class ChessController {
             @ApiResponse(responseCode = "200", description = "Legal moves retrieved successfully"),
             @ApiResponse(responseCode = "500", description = "Internal server error")
     })
-    @ResponseStatus(HttpStatus.OK)
+    @ResponseStatus(OK)
     public LegalMovesDto LegalMoves(@PathVariable String id, @RequestParam String square) {
         return chessService.getLegalMoves(id, square);
     }
@@ -60,7 +64,7 @@ public class ChessController {
             @ApiResponse(responseCode = "500", description = "Internal server error"),
             @ApiResponse(responseCode = "404", description = "Game not found")
     })
-    @ResponseStatus(HttpStatus.OK)
+    @ResponseStatus(OK)
     public GameStateDto getGame(@PathVariable String id) {
         return chessService.findById(id);
     }
@@ -73,7 +77,7 @@ public class ChessController {
             @ApiResponse(responseCode = "400", description = "Invalid move"),
             @ApiResponse(responseCode = "404", description = "Game not found")
     })
-    @ResponseStatus(HttpStatus.OK)
+    @ResponseStatus(OK)
     public GameStateDto move(@PathVariable String id, @RequestBody MoveDto move) {
         return chessService.makeHumanMove(id, move);
     }
@@ -85,7 +89,7 @@ public class ChessController {
             @ApiResponse(responseCode = "500", description = "Internal server error"),
             @ApiResponse(responseCode = "404", description = "Game not found")
     })
-    @ResponseStatus(HttpStatus.OK)
+    @ResponseStatus(OK)
     public GameStateDto undo(@PathVariable String id) {
         return chessService.undoMove(id);
     }
@@ -97,7 +101,7 @@ public class ChessController {
             @ApiResponse(responseCode = "500", description = "Internal server error"),
             @ApiResponse(responseCode = "404", description = "Game not found")
     })
-    @ResponseStatus(HttpStatus.OK)
+    @ResponseStatus(OK)
     public String bestMove(@PathVariable String id,
             @RequestParam(defaultValue = "10") int depth) {
         return chessService.getBestMove(id, depth);
@@ -111,7 +115,7 @@ public class ChessController {
             @ApiResponse(responseCode = "400", description = "Invalid depth"),
             @ApiResponse(responseCode = "404", description = "Game not found")
     })
-    @ResponseStatus(HttpStatus.OK)
+    @ResponseStatus(OK)
     public GameStateDto botMove(@PathVariable String id,
             @RequestParam(defaultValue = "10") int depth) {
         return chessService.makeBotMove(id, depth);

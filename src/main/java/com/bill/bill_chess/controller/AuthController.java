@@ -1,6 +1,5 @@
 package com.bill.bill_chess.controller;
 
-import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -20,6 +19,9 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 
+import static org.springframework.http.HttpStatus.CREATED;
+import static org.springframework.http.HttpStatus.OK;
+
 @RestController
 @RequestMapping("/auth")
 @CrossOrigin(origins = "http://localhost:4200")
@@ -35,7 +37,7 @@ public class AuthController {
             @ApiResponse(responseCode = "201", description = "User registered successfully"),
             @ApiResponse(responseCode = "500", description = "Internal server error")
     })
-    @ResponseStatus(HttpStatus.CREATED)
+    @ResponseStatus(CREATED)
     public UserResponseDto register(@RequestBody UserCreateDto user) {
         return authService.registerUser(user);
     }
@@ -46,7 +48,7 @@ public class AuthController {
             @ApiResponse(responseCode = "200", description = "User logged in successfully"),
             @ApiResponse(responseCode = "500", description = "Internal server error")
     })
-    @ResponseStatus(HttpStatus.OK)
+    @ResponseStatus(OK)
     public LoginResponse login(@RequestBody LoginRequest request) {
         return authService.authenticate(request);
     }

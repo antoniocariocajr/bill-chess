@@ -1,7 +1,10 @@
 package com.bill.bill_chess.controller;
 
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -20,13 +23,17 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.constraints.NotEmpty;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.ResponseStatus;
+
+import static com.bill.bill_chess.infra.swagger.OpenApiConstants.SECURITY_SCHEME_NAME;
+import static org.springframework.http.HttpStatus.NO_CONTENT;
+import static org.springframework.http.HttpStatus.OK;
 
 @RestController
 @RequestMapping("/api/users")
 @CrossOrigin(origins = "http://localhost:4200")
 @Tag(name = "User", description = "User API")
+@SecurityRequirement(name = SECURITY_SCHEME_NAME)
 @RequiredArgsConstructor
 public class UserController {
 
@@ -38,7 +45,8 @@ public class UserController {
             @ApiResponse(responseCode = "200", description = "Users retrieved successfully"),
             @ApiResponse(responseCode = "500", description = "Internal server error")
     })
-    @ResponseStatus(HttpStatus.OK)
+    @ResponseStatus(OK)
+    @PreAuthorize("hasAuthority('SCOPE_ADMIN')")
     public Page<UserResponseDto> getAllUsers(Pageable pageable) {
         return userService.getAllUsers(pageable);
     }
@@ -49,7 +57,8 @@ public class UserController {
             @ApiResponse(responseCode = "200", description = "User retrieved successfully"),
             @ApiResponse(responseCode = "500", description = "Internal server error")
     })
-    @ResponseStatus(HttpStatus.OK)
+    @ResponseStatus(OK)
+    @PreAuthorize("hasAuthority('SCOPE_ADMIN')")
     public UserResponseDto getUserById(@PathVariable String id) {
         return userService.getUserById(id);
     }
@@ -60,7 +69,7 @@ public class UserController {
             @ApiResponse(responseCode = "200", description = "User retrieved successfully"),
             @ApiResponse(responseCode = "500", description = "Internal server error")
     })
-    @ResponseStatus(HttpStatus.OK)
+    @ResponseStatus(OK)
     public UserResponseDto getUserByEmail(@PathVariable String email) {
         return userService.getUserByEmail(email);
     }
@@ -71,7 +80,7 @@ public class UserController {
             @ApiResponse(responseCode = "200", description = "User updated successfully"),
             @ApiResponse(responseCode = "500", description = "Internal server error")
     })
-    @ResponseStatus(HttpStatus.OK)
+    @ResponseStatus(OK)
     public UserResponseDto updateAddGame(@PathVariable String id, @PathVariable @NotEmpty String idGame) {
         return userService.updateAddGame(id, idGame);
     }
@@ -82,7 +91,7 @@ public class UserController {
             @ApiResponse(responseCode = "200", description = "User updated successfully"),
             @ApiResponse(responseCode = "500", description = "Internal server error")
     })
-    @ResponseStatus(HttpStatus.OK)
+    @ResponseStatus(OK)
     public UserResponseDto updateRemoveGame(@PathVariable String id, @PathVariable @NotEmpty String idGame) {
         return userService.updateRemoveGame(id, idGame);
     }
@@ -93,7 +102,8 @@ public class UserController {
             @ApiResponse(responseCode = "200", description = "User updated successfully"),
             @ApiResponse(responseCode = "500", description = "Internal server error")
     })
-    @ResponseStatus(HttpStatus.OK)
+    @ResponseStatus(OK)
+    @PreAuthorize("hasAuthority('SCOPE_ADMIN')")
     public UserResponseDto updateAddRole(@PathVariable String id, @PathVariable @NotEmpty User.Role role) {
         return userService.updateAddRole(id, role);
     }
@@ -104,7 +114,8 @@ public class UserController {
             @ApiResponse(responseCode = "200", description = "User updated successfully"),
             @ApiResponse(responseCode = "500", description = "Internal server error")
     })
-    @ResponseStatus(HttpStatus.OK)
+    @ResponseStatus(OK)
+    @PreAuthorize("hasAuthority('SCOPE_ADMIN')")
     public UserResponseDto updateRemoveRole(@PathVariable String id, @PathVariable @NotEmpty User.Role role) {
         return userService.updateRemoveRole(id, role);
     }
@@ -115,7 +126,8 @@ public class UserController {
             @ApiResponse(responseCode = "200", description = "User deactivated successfully"),
             @ApiResponse(responseCode = "500", description = "Internal server error")
     })
-    @ResponseStatus(HttpStatus.NO_CONTENT)
+    @ResponseStatus(NO_CONTENT)
+    @PreAuthorize("hasAuthority('SCOPE_ADMIN')")
     public void deactivate(@PathVariable String id) {
         userService.deactivate(id);
     }
@@ -126,7 +138,8 @@ public class UserController {
             @ApiResponse(responseCode = "200", description = "User deleted successfully"),
             @ApiResponse(responseCode = "500", description = "Internal server error")
     })
-    @ResponseStatus(HttpStatus.NO_CONTENT)
+    @ResponseStatus(NO_CONTENT)
+    @PreAuthorize("hasAuthority('SCOPE_ADMIN')")
     public void deleteUser(@PathVariable String id) {
         userService.deleteUser(id);
     }

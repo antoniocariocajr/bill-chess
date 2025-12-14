@@ -113,5 +113,5 @@ Quer ensinar um truque novo para esse cachorro velho?
 ---
 
 <div align="center">
-  <sub>Feito com ☕ e ♟️ por <b>Antonio</b> (e ajudinha do Antigravity).</sub>
+  <sub>Feito com ☕ e ♟️ por <b>Antonio</b> .</sub>
 </div>
