@@ -43,6 +43,7 @@ public class ChessController {
     })
     @ResponseStatus(CREATED)
     public GameStateDto initGame() {
+        System.out.println("chegou aqui init game");
         return chessService.createGame();
     }
 
