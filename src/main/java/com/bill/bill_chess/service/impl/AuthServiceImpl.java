@@ -20,7 +20,7 @@ import java.time.Instant;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
-import static com.bill.bill_chess.core.GameConstants.ISSUER;
+import static com.bill.bill_chess.infra.constants.GameConstants.ISSUER;
 import static org.springframework.http.HttpStatus.*;
 
 @Service
@@ -34,7 +34,8 @@ public class AuthServiceImpl implements AuthService {
     @Override
     public UserResponseDto registerUser(UserCreateDto dto) {
         Optional<User> userOptional = userRepository.findByEmail(dto.email());
-        if (userOptional.isPresent()) throw new ResponseStatusException(CONFLICT,"Usuario ja cadastrado!");
+        if (userOptional.isPresent())
+            throw new ResponseStatusException(CONFLICT, "Usuario ja cadastrado!");
         User newUser = UserMapper.toEntity(dto, passwordEncoder.encode(dto.password()));
         newUser = userRepository.save(newUser);
         return UserMapper.toResponse(newUser);
@@ -42,14 +43,14 @@ public class AuthServiceImpl implements AuthService {
 
     @Override
     public LoginResponse authenticate(LoginRequest loginRequest) {
-        System.out.println("login: "+ loginRequest.email());
+        System.out.println("login: " + loginRequest.email());
         var user = userRepository.findByEmail(loginRequest.email())
                 .orElseThrow(() -> new ResponseStatusException(NOT_FOUND));
         if (isLoginCorrect(loginRequest, user.getPassword())) {
             System.out.println("verificou a senha");
             return encode(user);
         }
-        throw new ResponseStatusException(UNAUTHORIZED,"user or password is invalid!");
+        throw new ResponseStatusException(UNAUTHORIZED, "user or password is invalid!");
     }
 
     @Override

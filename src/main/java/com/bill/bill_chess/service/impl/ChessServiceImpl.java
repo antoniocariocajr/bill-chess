@@ -1,24 +1,24 @@
 package com.bill.bill_chess.service.impl;
 
-import com.bill.bill_chess.core.GameConstants;
+import com.bill.bill_chess.infra.constants.GameConstants;
 import com.bill.bill_chess.infra.exception.ChessEngineException;
 import com.bill.bill_chess.infra.exception.GameNotFoundException;
-import com.bill.bill_chess.infra.exception.IllegalMoveException;
 import com.bill.bill_chess.infra.exception.InvalidTurnException;
 import com.bill.bill_chess.service.ChessService;
 import com.bill.bill_chess.service.MoveEngine;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+
+import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.bill.bill_chess.service.mapper.ChessMapper;
-import com.bill.bill_chess.core.ChessUtil;
-import com.bill.bill_chess.core.RuleSet;
+import com.bill.bill_chess.service.rule.RuleSet;
+import com.bill.bill_chess.service.util.ChessUtil;
+import com.bill.bill_chess.service.validation.ChessValidation;
 import com.bill.bill_chess.domain.enums.CastleRight;
-import com.bill.bill_chess.domain.enums.Color;
 import com.bill.bill_chess.domain.enums.GameStatus;
-import com.bill.bill_chess.domain.model.Board;
 import com.bill.bill_chess.domain.model.ChessGame;
 import com.bill.bill_chess.domain.model.Move;
 import com.bill.bill_chess.domain.model.Position;
@@ -27,6 +27,8 @@ import com.bill.bill_chess.controller.dto.LegalMovesDto;
 import com.bill.bill_chess.controller.dto.MoveDto;
 import com.bill.bill_chess.persistence.ChessEntity;
 import com.bill.bill_chess.persistence.ChessRepository;
+import com.bill.bill_chess.persistence.User;
+import com.bill.bill_chess.persistence.UserRepository;
 
 import java.time.Duration;
 import java.util.List;
@@ -39,34 +41,45 @@ import java.util.concurrent.*;
 public class ChessServiceImpl implements ChessService {
 
     private final ChessRepository chessRepository;
+    private final UserRepository userRepository;
     private final ChessMapper chessMapper;
     private final MoveEngine localEngine;
     private final ExecutorService stockfishExecutor;
 
     @Transactional
     @Override
-    public GameStateDto createGame() {
-        List<ChessEntity> entities = chessRepository.findAllByFenBoard(GameConstants.FEN_INIT);
+    public GameStateDto createGame(JwtAuthenticationToken token) {
+        User user = userRepository.findById(token.getName())
+                .orElseThrow(() -> new GameNotFoundException("User not found"));
+        List<ChessEntity> entities = user.getChessEntities()
+                .stream()
+                .filter(e -> e.fenBoard().equals(GameConstants.FEN_INIT))
+                .toList();
         if (!entities.isEmpty()) {
             return chessMapper.toGameStateDto(entities.getFirst());
         }
         ChessEntity entity = ChessEntity.initial();
         entity = chessRepository.save(entity);
+        user.getChessEntities().add(entity);
+        userRepository.save(user);
         return chessMapper.toGameStateDto(entity);
     }
 
     @Transactional
-    private GameStateDto makeMove(String gameId, MoveDto dto) {
+    private GameStateDto makeMove(String gameId, MoveDto dto, JwtAuthenticationToken token) {
+        checkUserAuthorization(token, gameId);
         ChessEntity entity = getEntity(gameId);
         ChessGame game = chessMapper.toDomain(entity);
-        validateTurn(dto, game.getActiveColor());
+        ChessValidation.validateTurn(dto, game.getActiveColor());
         Move m = Move.fromUci(dto.uci());
         Move move = Move.quiet(m.from(), m.to(), game.getBoard().pieceAt(m.from())
                 .orElseThrow(() -> new GameNotFoundException("Piece not found at source square")));
-        validateLegality(game.getBoard(), move, game.getActiveColor(), game.getCastleRights(), game.getEnPassant());
+        ChessValidation.validateLegality(game.getBoard(), move, game.getActiveColor(), game.getCastleRights(),
+                game.getEnPassant());
+        Set<CastleRight> castleRights = ChessUtil.updateCastlingRights(game.getCastleRights(), move);
         game.setBoard(ChessUtil.makeMove(game.getBoard(), move));
-        game.setCastleRights(updateCastlingRights(game.getCastleRights(), move));
-        game.setEnPassant(updateEnPassant(game.getBoard(), move));
+        game.setCastleRights(castleRights);
+        game.setEnPassant(ChessUtil.updateEnPassant(game.getBoard(), move));
         game.setActiveColor(game.getActiveColor().opposite());
         if (move.pieceMoved().isPawn()) {
             game.setHalfMoveClock(0);
@@ -85,24 +98,25 @@ public class ChessServiceImpl implements ChessService {
     }
 
     @Override
-    public GameStateDto makeHumanMove(String gameId, MoveDto dto) {
-        return makeMove(gameId, dto);
+    public GameStateDto makeHumanMove(String gameId, MoveDto dto, JwtAuthenticationToken token) {
+        return makeMove(gameId, dto, token);
     }
 
     @Transactional
     @Override
-    public GameStateDto makeBotMove(String gameId, int depth) {
+    public GameStateDto makeBotMove(String gameId, int depth, JwtAuthenticationToken token) {
         ChessEntity entity = getEntity(gameId);
         ChessGame game = chessMapper.toDomain(entity);
         if (game.getPlayerBotColor() != game.getActiveColor()) {
             throw new InvalidTurnException(GameConstants.NOT_BOT_TURN_MSG);
         }
         String uci = botMove(entity.toFen(), depth <= 0 ? GameConstants.DEFAULT_DEPTH : depth);
-        return makeMove(gameId, new MoveDto(game.getPlayerBotColor().fen(), uci));
+        return makeMove(gameId, new MoveDto(game.getPlayerBotColor().fen(), uci), token);
     }
 
     @Override
-    public GameStateDto findById(String gameId) {
+    public GameStateDto findById(String gameId, JwtAuthenticationToken token) {
+        checkUserAuthorization(token, gameId);
         ChessEntity entity = getEntity(gameId);
         return chessMapper.toGameStateDto(entity);
     }
@@ -128,7 +142,8 @@ public class ChessServiceImpl implements ChessService {
 
     @Override
     @Transactional
-    public GameStateDto undoMove(String gameId) {
+    public GameStateDto undoMove(String gameId, JwtAuthenticationToken token) {
+        checkUserAuthorization(token, gameId);
         ChessEntity entity = getEntity(gameId);
         ChessGame game = chessMapper.toDomain(entity);
         if (game.getActiveColor() != game.getPlayerBotColor()) {
@@ -144,71 +159,6 @@ public class ChessServiceImpl implements ChessService {
     private ChessEntity getEntity(String gameId) {
         return chessRepository.findById(gameId)
                 .orElseThrow(() -> new GameNotFoundException(GameConstants.GAME_NOT_FOUND_MSG));
-    }
-
-    private void validateTurn(MoveDto dto, Color active) {
-        if (!dto.color().equalsIgnoreCase(active.fen()))
-            throw new InvalidTurnException(GameConstants.NOT_YOUR_TURN_MSG);
-    }
-
-    private void validateLegality(Board board, Move move, Color active,
-            Set<CastleRight> rights, Position enPassant) {
-        boolean legal = RuleSet.generateLegal(board, active, rights, enPassant)
-                .stream()
-                .anyMatch(m -> m.equals(move));
-        log.debug("Checked legality: {} move={}", legal, move.toUci());
-        if (!legal)
-            throw new IllegalMoveException("Illegal move: " + move.toUci());
-    }
-
-    private Set<CastleRight> updateCastlingRights(Set<CastleRight> current, Move move) {
-        if (move.pieceMoved().isKing()) {
-            current.remove(move.pieceMoved().isWhite() ? CastleRight.WHITE_KINGSIDE
-                    : CastleRight.BLACK_KINGSIDE);
-            current.remove(move.pieceMoved().isWhite() ? CastleRight.WHITE_QUEENSIDE
-                    : CastleRight.BLACK_QUEENSIDE);
-            return current;
-        }
-        if (move.pieceMoved().isRook()) {
-            Position from = move.from();
-            int rank = from.rank();
-            Color cor = move.pieceMoved().color();
-            if (from.file() == 7 && rank == (cor.isWhite() ? 1 : 8)) {
-                current.remove(move.pieceMoved().isWhite() ? CastleRight.WHITE_KINGSIDE
-                        : CastleRight.BLACK_KINGSIDE);
-            }
-            if (from.file() == 0 && rank == (cor.isWhite() ? 1 : 8)) {
-                current.remove(move.pieceMoved().isWhite() ? CastleRight.WHITE_QUEENSIDE
-                        : CastleRight.BLACK_QUEENSIDE);
-            }
-            return current;
-        }
-        if (move.captured().isPresent() && move.captured().get().isRook()) {
-            Position to = move.to();
-            int rank = to.rank();
-            Color cor = move.captured().get().color();
-            if (to.file() == 7 && rank == (cor.isWhite() ? 1 : 8)) {
-                current.remove(move.pieceMoved().isWhite() ? CastleRight.WHITE_KINGSIDE
-                        : CastleRight.BLACK_KINGSIDE);
-            }
-            if (to.file() == 0 && rank == (cor.isWhite() ? 1 : 8)) {
-                current.remove(move.pieceMoved().isWhite() ? CastleRight.WHITE_QUEENSIDE
-                        : CastleRight.BLACK_QUEENSIDE);
-            }
-        }
-        return current;
-    }
-
-    private Position updateEnPassant(Board board, Move move) {
-        if (!move.pieceMoved().isPawn())
-            return null;
-        Position from = move.from();
-        Position to = move.to();
-        int dr = Math.abs(to.rank() - from.rank());
-        if (dr == 2) {
-            return Position.of((from.rank() + to.rank()) / 2, from.file());
-        }
-        return null;
     }
 
     private String botMove(String fen, int depth) {
@@ -231,4 +181,9 @@ public class ChessServiceImpl implements ChessService {
         }
     }
 
+    private void checkUserAuthorization(JwtAuthenticationToken token, String gameId) {
+        if (!userRepository.existsByIdAndChessEntityId(token.getName(), gameId)) {
+            throw new IllegalArgumentException("User not authorized");
+        }
+    }
 }

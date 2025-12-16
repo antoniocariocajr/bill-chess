@@ -1,6 +1,8 @@
 package com.bill.bill_chess.controller;
 
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -42,9 +44,9 @@ public class ChessController {
             @ApiResponse(responseCode = "500", description = "Internal server error")
     })
     @ResponseStatus(CREATED)
-    public GameStateDto initGame() {
+    public GameStateDto initGame(@AuthenticationPrincipal JwtAuthenticationToken token) {
         System.out.println("chegou aqui init game");
-        return chessService.createGame();
+        return chessService.createGame(token);
     }
 
     @GetMapping("/{id}/legal-moves")
@@ -66,8 +68,8 @@ public class ChessController {
             @ApiResponse(responseCode = "404", description = "Game not found")
     })
     @ResponseStatus(OK)
-    public GameStateDto getGame(@PathVariable String id) {
-        return chessService.findById(id);
+    public GameStateDto getGame(@PathVariable String id, @AuthenticationPrincipal JwtAuthenticationToken token) {
+        return chessService.findById(id, token);
     }
 
     @PostMapping("/{id}/move")
@@ -79,8 +81,9 @@ public class ChessController {
             @ApiResponse(responseCode = "404", description = "Game not found")
     })
     @ResponseStatus(OK)
-    public GameStateDto move(@PathVariable String id, @RequestBody MoveDto move) {
-        return chessService.makeHumanMove(id, move);
+    public GameStateDto move(@PathVariable String id, @RequestBody MoveDto move,
+            @AuthenticationPrincipal JwtAuthenticationToken token) {
+        return chessService.makeHumanMove(id, move, token);
     }
 
     @PostMapping("/{id}/undo")
@@ -91,8 +94,8 @@ public class ChessController {
             @ApiResponse(responseCode = "404", description = "Game not found")
     })
     @ResponseStatus(OK)
-    public GameStateDto undo(@PathVariable String id) {
-        return chessService.undoMove(id);
+    public GameStateDto undo(@PathVariable String id, @AuthenticationPrincipal JwtAuthenticationToken token) {
+        return chessService.undoMove(id, token);
     }
 
     @PostMapping("/{id}/best-move")
@@ -118,7 +121,7 @@ public class ChessController {
     })
     @ResponseStatus(OK)
     public GameStateDto botMove(@PathVariable String id,
-            @RequestParam(defaultValue = "10") int depth) {
-        return chessService.makeBotMove(id, depth);
+            @RequestParam(defaultValue = "10") int depth, @AuthenticationPrincipal JwtAuthenticationToken token) {
+        return chessService.makeBotMove(id, depth, token);
     }
 }

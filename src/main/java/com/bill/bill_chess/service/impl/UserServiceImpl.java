@@ -14,7 +14,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
-import static com.bill.bill_chess.core.GameConstants.GAME_NOT_FOUND_MSG;
+import static com.bill.bill_chess.infra.constants.GameConstants.GAME_NOT_FOUND_MSG;
 import static org.springframework.http.HttpStatus.NOT_FOUND;
 
 @Service
@@ -32,14 +32,14 @@ public class UserServiceImpl implements UserService {
     @Override
     public UserResponseDto getUserById(String id) {
         User user = userRepository.findById(id)
-                .orElseThrow(()->new ResponseStatusException(NOT_FOUND,"User not found!"));
+                .orElseThrow(() -> new ResponseStatusException(NOT_FOUND, "User not found!"));
         return UserMapper.toResponse(user);
     }
 
     @Override
     public UserResponseDto getUserByEmail(String email) {
         User user = userRepository.findByEmail(email)
-                .orElseThrow(()->new ResponseStatusException(NOT_FOUND,"User not found!"));
+                .orElseThrow(() -> new ResponseStatusException(NOT_FOUND, "User not found!"));
         return UserMapper.toResponse(user);
     }
 
@@ -73,7 +73,7 @@ public class UserServiceImpl implements UserService {
     @Override
     public UserResponseDto updateRemoveRole(String id, User.Role role) {
         User user = getUser(id);
-        if(user.getRoles().size()>1){
+        if (user.getRoles().size() > 1) {
             user.removeRole(role);
         }
         user = userRepository.save(user);
@@ -93,12 +93,13 @@ public class UserServiceImpl implements UserService {
         userRepository.delete(user);
     }
 
-    private User getUser(String id){
+    private User getUser(String id) {
         return userRepository.findById(id)
-                .orElseThrow(()->new ResponseStatusException(NOT_FOUND,"User not found!"));
+                .orElseThrow(() -> new ResponseStatusException(NOT_FOUND, "User not found!"));
     }
-    private ChessEntity getGame(String id){
+
+    private ChessEntity getGame(String id) {
         return chessRepository.findById(id)
-                .orElseThrow(()->new GameNotFoundException(GAME_NOT_FOUND_MSG));
+                .orElseThrow(() -> new GameNotFoundException(GAME_NOT_FOUND_MSG));
     }
 }

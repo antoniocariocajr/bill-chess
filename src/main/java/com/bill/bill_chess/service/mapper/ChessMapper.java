@@ -12,6 +12,7 @@ import com.bill.bill_chess.domain.enums.CastleRight;
 import com.bill.bill_chess.domain.enums.Color;
 import com.bill.bill_chess.controller.dto.GameStateDto;
 import com.bill.bill_chess.persistence.ChessEntity;
+import com.bill.bill_chess.persistence.MoveEntity;
 
 @Component
 public class ChessMapper {
@@ -47,8 +48,8 @@ public class ChessMapper {
             Instant updatedAt) {
 
         StringBuilder boardFen = getBoardFen(board);
-        List<String> listMoves = board.history().stream()
-                .map(Move::toUci).toList();
+        List<MoveEntity> listMoves = board.history().stream()
+                .map(this::toMoveEntity).toList();
         String setRights = rights.stream().map(CastleRight::getFenSymbol).collect(Collectors.joining());
 
         return new ChessEntity(
@@ -68,7 +69,7 @@ public class ChessMapper {
     }
 
     public ChessGame toDomain(ChessEntity entity) {
-        List<Move> moves = entity.moves().stream().map(Move::fromUci).toList();
+        List<Move> moves = entity.moves().stream().map(this::toMove).toList();
         Color color = Objects.equals(entity.activeColor(), "w") ? Color.WHITE : Color.BLACK;
         Set<CastleRight> rights = new HashSet<>(Set.of());
         for (char c : entity.castlingRights().toCharArray()) {
@@ -81,7 +82,8 @@ public class ChessMapper {
         }
         System.out.println(entity.id());
         System.out.println(entity.toFen());
-        Position enPassant = Objects.equals(entity.enPassantSquare(), "-") ? null : Position.fromNotation(entity.enPassantSquare());
+        Position enPassant = Objects.equals(entity.enPassantSquare(), "-") ? null
+                : Position.fromNotation(entity.enPassantSquare());
         return ChessGame.builder()
                 .id(entity.id())
                 .board(Board.fromFen(entity.fenBoard(), moves))
@@ -103,8 +105,30 @@ public class ChessMapper {
                 entity.activeColor(),
                 entity.status(),
                 entity.inCheck(),
-                entity.moves().isEmpty()?"-":entity.moves().getLast(),
+                entity.moves().isEmpty() ? "-" : entity.moves().getLast().uci(),
                 entity.activeColor().equals(entity.playerBotColor()));
+    }
+
+    public MoveEntity toMoveEntity(Move move) {
+        return new MoveEntity(
+                move.toUci(),
+                move.captured().map(Piece::getUnicode).orElse(null),
+                move.promotion().map(Piece::getUnicode).orElse(null),
+                move.moved().map(Piece::getUnicode).orElse(null),
+                move.isCastling(),
+                move.isEnPassant());
+    }
+
+    public Move toMove(MoveEntity entity) {
+        Move move = Move.fromUci(entity.uci());
+        return new Move(
+                move.from(),
+                move.to(),
+                entity.capturedPiece() == null ? null : Piece.fromUnicode(entity.capturedPiece()),
+                entity.promotion() == null ? null : Piece.fromUnicode(entity.promotion()),
+                entity.pieceMoved() == null ? null : Piece.fromUnicode(entity.pieceMoved()),
+                entity.isCastling(),
+                entity.isEnPassant());
     }
 
     private StringBuilder getBoardFen(Board board) {
@@ -130,6 +154,5 @@ public class ChessMapper {
         }
         return boardFen;
     }
-
 
 }

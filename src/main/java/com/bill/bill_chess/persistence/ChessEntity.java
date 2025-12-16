@@ -7,19 +7,21 @@ import java.util.List;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
 
+import jakarta.validation.constraints.Size;
+
 @Document(collection = "boards")
 public record ChessEntity(
                 @Id String id,
                 String fenBoard, // posição
-                String activeColor, // "w" ou "b"
-                String playerBotColor, // "w" ou "b"
-                String castlingRights, // "KQkq" ou "-"
-                String enPassantSquare, // "e3" ou "-"
+                @Size(max = 1) String activeColor, // "w" ou "b"
+                @Size(max = 1) String playerBotColor, // "w" ou "b"
+                @Size(max = 4) String castlingRights, // "KQkq" ou "-"
+                @Size(max = 2) String enPassantSquare, // "e3" ou "-"
                 int halfMoveClock,
                 int fullMoveNumber,
                 boolean inCheck,
-                String status,
-                List<String> moves, // histórico UCI
+                @Size(max = 12) String status,
+                List<MoveEntity> moves, // histórico UCI
                 Instant createdAt,
                 Instant updatedAt) {
 
@@ -39,7 +41,8 @@ public record ChessEntity(
                                 Instant.now(),
                                 Instant.now());
         }
-        public boolean isTurnBot(){
-            return activeColor().equals(playerBotColor());
+
+        public boolean isTurnBot() {
+                return activeColor().equals(playerBotColor());
         }
 }

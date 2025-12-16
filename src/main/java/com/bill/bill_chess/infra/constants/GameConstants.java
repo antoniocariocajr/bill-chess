@@ -1,4 +1,4 @@
-package com.bill.bill_chess.core;
+package com.bill.bill_chess.infra.constants;
 
 public final class GameConstants {
     private GameConstants() {

@@ -1,9 +1,9 @@
 package com.bill.bill_chess.service.impl;
 
-import com.bill.bill_chess.core.ChessValidation;
 import com.bill.bill_chess.infra.stockfish.StockfishProperties;
 import com.bill.bill_chess.infra.exception.ChessEngineException;
 import com.bill.bill_chess.service.MoveEngine;
+import com.bill.bill_chess.service.validation.ChessValidation;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import lombok.extern.slf4j.Slf4j;
@@ -24,7 +24,7 @@ public class StockfishService implements MoveEngine {
     private final Cache<String, String> cache;
 
     public StockfishService(WebClient.Builder builder,
-                            StockfishProperties props) {
+            StockfishProperties props) {
         this.props = props;
         this.webClient = builder
                 .baseUrl(props.getBaseUrl())
@@ -63,7 +63,7 @@ public class StockfishService implements MoveEngine {
                 .get()
                 .uri(uriBuilder -> uriBuilder
                         // path relativo, mas baseUrl já tem o esquema + host
-                        .path(props.getPath())   // /api/stockfish.php
+                        .path(props.getPath()) // /api/stockfish.php
                         .queryParam("fen", fen)
                         .queryParam("depth", depth)
                         .build())
@@ -71,7 +71,7 @@ public class StockfishService implements MoveEngine {
                 .bodyToMono(String.class)
                 .timeout(props.getTimeout())
                 .retryWhen(Retry.backoff(2, Duration.ofMillis(500)))
-                .doOnError(err -> err.printStackTrace())  // log temporário
+                .doOnError(err -> err.printStackTrace()) // log temporário
                 .onErrorMap(ex -> new ChessEngineException("Falha ao obter movimento", ex));
     }
 

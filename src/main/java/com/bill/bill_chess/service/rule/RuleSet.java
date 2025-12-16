@@ -1,4 +1,4 @@
-package com.bill.bill_chess.core;
+package com.bill.bill_chess.service.rule;
 
 import java.util.*;
 
@@ -136,8 +136,8 @@ public final class RuleSet {
         if (to.rank() == 1 || to.rank() == 8) {
             for (PieceType pr : new PieceType[] { PieceType.QUEEN, PieceType.ROOK, PieceType.BISHOP, PieceType.KNIGHT })
                 if (capture != null) {
-                    moves.add(new Move(from, to, capture, Piece.of(colorSide, pr), false, false,
-                            Piece.of(colorSide, pr)));
+                    moves.add(new Move(from, to, capture, Piece.of(colorSide, pr), Piece.of(colorSide, pr), false,
+                            false));
                 } else {
                     moves.add(Move.promotion(from, to, Piece.of(colorSide, pr), Piece.of(colorSide, pr)));
                 }
