@@ -11,7 +11,6 @@ import com.bill.bill_chess.infra.exception.IllegalMoveException;
 import java.util.Optional;
 import java.util.Set;
 
-import static com.bill.bill_chess.domain.enums.Color.WHITE;
 import static com.bill.bill_chess.domain.enums.CastleRight.*;
 
 public class ChessUtil {
@@ -54,10 +53,6 @@ public class ChessUtil {
         return board;
     }
 
-    public static String getPieceColor(Piece piece) {
-        return piece.color() == WHITE ? "w" : "b";
-    }
-
     public static Set<CastleRight> updateCastlingRights(Set<CastleRight> current, Move move) {
         if (move.pieceMoved().isKing()) {
             current.remove(move.pieceMoved().isWhite() ? WHITE_KINGSIDE : BLACK_KINGSIDE);
@@ -90,7 +85,7 @@ public class ChessUtil {
         return current;
     }
 
-    public static Position updateEnPassant(Board board, Move move) {
+    public static Position updateEnPassant(Move move) {
         if (!move.pieceMoved().isPawn())
             return null;
         Position from = move.from();

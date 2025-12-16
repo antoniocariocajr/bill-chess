@@ -9,9 +9,12 @@ import com.bill.bill_chess.persistence.User;
 import com.bill.bill_chess.persistence.UserRepository;
 import com.bill.bill_chess.service.UserService;
 import com.bill.bill_chess.service.mapper.UserMapper;
+import com.bill.bill_chess.service.validation.UserValidation;
+
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -31,21 +34,24 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public UserResponseDto getUserById(String id) {
+    public UserResponseDto getUserById(String id, JwtAuthenticationToken token) {
+        UserValidation.validateUser(token, id);
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(NOT_FOUND, "User not found!"));
         return UserMapper.toResponse(user);
     }
 
     @Override
-    public UserResponseDto getUserByEmail(String email) {
+    public UserResponseDto getUserByEmail(String email, JwtAuthenticationToken token) {
+        UserValidation.validateUser(token, email);
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new ResponseStatusException(NOT_FOUND, "User not found!"));
         return UserMapper.toResponse(user);
     }
 
     @Override
-    public UserResponseDto updateAddGame(String id, String idGame) {
+    public UserResponseDto updateAddGame(String id, String idGame, JwtAuthenticationToken token) {
+        UserValidation.validateUser(token, id);
         User user = getUser(id);
         ChessEntity game = getGame(id);
         user.addChessEntity(game, Color.WHITE);
@@ -54,7 +60,8 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public UserResponseDto updateRemoveGame(String id, String idGame) {
+    public UserResponseDto updateRemoveGame(String id, String idGame, JwtAuthenticationToken token) {
+        UserValidation.validateUser(token, id);
         User user = getUser(id);
         ChessEntity game = getGame(id);
         user.removeChessEntity(game);

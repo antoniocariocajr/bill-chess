@@ -61,7 +61,6 @@ public class ChessServiceImpl implements ChessService {
                 .stream()
                 .filter(e -> FEN_INIT.equals(e.getKey().fenBoard()))
                 .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
-        ;
         if (!mapEntities.isEmpty()) {
             return chessMapper.toGameStateDto(mapEntities.keySet().stream().findFirst().get());
         }
@@ -86,7 +85,7 @@ public class ChessServiceImpl implements ChessService {
         Set<CastleRight> castleRights = ChessUtil.updateCastlingRights(game.getCastleRights(), move);
         game.setBoard(ChessUtil.makeMove(game.getBoard(), move));
         game.setCastleRights(castleRights);
-        game.setEnPassant(ChessUtil.updateEnPassant(game.getBoard(), move));
+        game.setEnPassant(ChessUtil.updateEnPassant(move));
         game.setActiveColor(game.getActiveColor().opposite());
         if (move.pieceMoved().isPawn()) {
             game.setHalfMoveClock(0);

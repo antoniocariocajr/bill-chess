@@ -71,7 +71,7 @@ public class StockfishService implements MoveEngine {
                 .bodyToMono(String.class)
                 .timeout(props.getTimeout())
                 .retryWhen(Retry.backoff(2, Duration.ofMillis(500)))
-                .doOnError(err -> err.printStackTrace()) // log temporário
+                .doOnError(Throwable::printStackTrace) // log temporário
                 .onErrorMap(ex -> new ChessEngineException("Falha ao obter movimento", ex));
     }
 

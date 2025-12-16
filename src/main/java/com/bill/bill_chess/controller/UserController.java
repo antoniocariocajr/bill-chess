@@ -4,6 +4,8 @@ import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -42,7 +44,9 @@ public class UserController {
     @Operation(summary = "get all users")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Users retrieved successfully"),
-            @ApiResponse(responseCode = "500", description = "Internal server error")
+            @ApiResponse(responseCode = "500", description = "Internal server error"),
+            @ApiResponse(responseCode = "401", description = "Unauthorized"),
+            @ApiResponse(responseCode = "403", description = "Forbidden")
     })
     @ResponseStatus(OK)
     @PreAuthorize("hasAuthority('SCOPE_ADMIN')")
@@ -54,52 +58,70 @@ public class UserController {
     @Operation(summary = "get user by id")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "User retrieved successfully"),
-            @ApiResponse(responseCode = "500", description = "Internal server error")
+            @ApiResponse(responseCode = "500", description = "Internal server error"),
+            @ApiResponse(responseCode = "401", description = "Unauthorized"),
+            @ApiResponse(responseCode = "403", description = "Forbidden"),
+            @ApiResponse(responseCode = "404", description = "User not found")
     })
     @ResponseStatus(OK)
     @PreAuthorize("hasAuthority('SCOPE_ADMIN')")
-    public UserResponseDto getUserById(@PathVariable String id) {
-        return userService.getUserById(id);
+    public UserResponseDto getUserById(@PathVariable String id, @AuthenticationPrincipal JwtAuthenticationToken token) {
+        return userService.getUserById(id, token);
     }
 
     @GetMapping("/email/{email}")
     @Operation(summary = "get user by email")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "User retrieved successfully"),
-            @ApiResponse(responseCode = "500", description = "Internal server error")
+            @ApiResponse(responseCode = "500", description = "Internal server error"),
+            @ApiResponse(responseCode = "401", description = "Unauthorized"),
+            @ApiResponse(responseCode = "403", description = "Forbidden"),
+            @ApiResponse(responseCode = "404", description = "User not found")
     })
     @ResponseStatus(OK)
-    public UserResponseDto getUserByEmail(@PathVariable String email) {
-        return userService.getUserByEmail(email);
+    public UserResponseDto getUserByEmail(@PathVariable String email,
+            @AuthenticationPrincipal JwtAuthenticationToken token) {
+        return userService.getUserByEmail(email, token);
     }
 
     @PostMapping("/{id}/add-game/{idGame}")
     @Operation(summary = "add game to user")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "User updated successfully"),
-            @ApiResponse(responseCode = "500", description = "Internal server error")
+            @ApiResponse(responseCode = "500", description = "Internal server error"),
+            @ApiResponse(responseCode = "401", description = "Unauthorized"),
+            @ApiResponse(responseCode = "403", description = "Forbidden"),
+            @ApiResponse(responseCode = "404", description = "User not found")
     })
     @ResponseStatus(OK)
-    public UserResponseDto updateAddGame(@PathVariable String id, @PathVariable @NotEmpty String idGame) {
-        return userService.updateAddGame(id, idGame);
+    public UserResponseDto updateAddGame(@PathVariable String id, @PathVariable @NotEmpty String idGame,
+            @AuthenticationPrincipal JwtAuthenticationToken token) {
+        return userService.updateAddGame(id, idGame, token);
     }
 
     @PostMapping("/{id}/remove-game/{idGame}")
     @Operation(summary = "remove game from user")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "User updated successfully"),
-            @ApiResponse(responseCode = "500", description = "Internal server error")
+            @ApiResponse(responseCode = "500", description = "Internal server error"),
+            @ApiResponse(responseCode = "401", description = "Unauthorized"),
+            @ApiResponse(responseCode = "403", description = "Forbidden"),
+            @ApiResponse(responseCode = "404", description = "User not found")
     })
     @ResponseStatus(OK)
-    public UserResponseDto updateRemoveGame(@PathVariable String id, @PathVariable @NotEmpty String idGame) {
-        return userService.updateRemoveGame(id, idGame);
+    public UserResponseDto updateRemoveGame(@PathVariable String id, @PathVariable @NotEmpty String idGame,
+            @AuthenticationPrincipal JwtAuthenticationToken token) {
+        return userService.updateRemoveGame(id, idGame, token);
     }
 
     @PostMapping("/{id}/add-role/{role}")
     @Operation(summary = "add role to user")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "User updated successfully"),
-            @ApiResponse(responseCode = "500", description = "Internal server error")
+            @ApiResponse(responseCode = "500", description = "Internal server error"),
+            @ApiResponse(responseCode = "401", description = "Unauthorized"),
+            @ApiResponse(responseCode = "403", description = "Forbidden"),
+            @ApiResponse(responseCode = "404", description = "User not found")
     })
     @ResponseStatus(OK)
     @PreAuthorize("hasAuthority('SCOPE_ADMIN')")
@@ -111,7 +133,10 @@ public class UserController {
     @Operation(summary = "remove role from user")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "User updated successfully"),
-            @ApiResponse(responseCode = "500", description = "Internal server error")
+            @ApiResponse(responseCode = "500", description = "Internal server error"),
+            @ApiResponse(responseCode = "401", description = "Unauthorized"),
+            @ApiResponse(responseCode = "403", description = "Forbidden"),
+            @ApiResponse(responseCode = "404", description = "User not found")
     })
     @ResponseStatus(OK)
     @PreAuthorize("hasAuthority('SCOPE_ADMIN')")
@@ -123,7 +148,10 @@ public class UserController {
     @Operation(summary = "deactivate user")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "User deactivated successfully"),
-            @ApiResponse(responseCode = "500", description = "Internal server error")
+            @ApiResponse(responseCode = "500", description = "Internal server error"),
+            @ApiResponse(responseCode = "401", description = "Unauthorized"),
+            @ApiResponse(responseCode = "403", description = "Forbidden"),
+            @ApiResponse(responseCode = "404", description = "User not found")
     })
     @ResponseStatus(NO_CONTENT)
     @PreAuthorize("hasAuthority('SCOPE_ADMIN')")
@@ -135,7 +163,10 @@ public class UserController {
     @Operation(summary = "delete user")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "User deleted successfully"),
-            @ApiResponse(responseCode = "500", description = "Internal server error")
+            @ApiResponse(responseCode = "500", description = "Internal server error"),
+            @ApiResponse(responseCode = "401", description = "Unauthorized"),
+            @ApiResponse(responseCode = "403", description = "Forbidden"),
+            @ApiResponse(responseCode = "404", description = "User not found")
     })
     @ResponseStatus(NO_CONTENT)
     @PreAuthorize("hasAuthority('SCOPE_ADMIN')")
