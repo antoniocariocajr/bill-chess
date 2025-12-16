@@ -1,12 +1,11 @@
 package com.bill.bill_chess.controller.dto;
 
-import java.util.List;
+import java.util.Map;
 
 public record UserResponseDto(
-        String id,
-        String email,
-        String name,
-        List<String> idGame,
-        boolean active
-) {
+                String id,
+                String email,
+                String name,
+                Map<String, String> mapGame,
+                boolean active) {
 }

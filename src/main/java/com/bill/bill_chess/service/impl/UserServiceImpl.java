@@ -1,6 +1,7 @@
 package com.bill.bill_chess.service.impl;
 
 import com.bill.bill_chess.controller.dto.UserResponseDto;
+import com.bill.bill_chess.domain.enums.Color;
 import com.bill.bill_chess.infra.exception.GameNotFoundException;
 import com.bill.bill_chess.persistence.ChessEntity;
 import com.bill.bill_chess.persistence.ChessRepository;
@@ -47,7 +48,7 @@ public class UserServiceImpl implements UserService {
     public UserResponseDto updateAddGame(String id, String idGame) {
         User user = getUser(id);
         ChessEntity game = getGame(id);
-        user.addChessEntity(game);
+        user.addChessEntity(game, Color.WHITE);
         user = userRepository.save(user);
         return UserMapper.toResponse(user);
     }

@@ -19,6 +19,7 @@ import com.bill.bill_chess.service.util.ChessUtil;
 import com.bill.bill_chess.service.validation.ChessValidation;
 import com.bill.bill_chess.domain.enums.CastleRight;
 import com.bill.bill_chess.domain.enums.GameStatus;
+import com.bill.bill_chess.domain.enums.Color;
 import com.bill.bill_chess.domain.model.ChessGame;
 import com.bill.bill_chess.domain.model.Move;
 import com.bill.bill_chess.domain.model.Position;
@@ -32,8 +33,12 @@ import com.bill.bill_chess.persistence.UserRepository;
 
 import java.time.Duration;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.*;
+import java.util.stream.Collectors;
+
+import static com.bill.bill_chess.infra.constants.GameConstants.FEN_INIT;
 
 @Service
 @Slf4j
@@ -51,16 +56,18 @@ public class ChessServiceImpl implements ChessService {
     public GameStateDto createGame(JwtAuthenticationToken token) {
         User user = userRepository.findById(token.getName())
                 .orElseThrow(() -> new GameNotFoundException("User not found"));
-        List<ChessEntity> entities = user.getChessEntities()
+        Map<ChessEntity, Color> mapEntities = user.getChessEntities()
+                .entrySet()
                 .stream()
-                .filter(e -> e.fenBoard().equals(GameConstants.FEN_INIT))
-                .toList();
-        if (!entities.isEmpty()) {
-            return chessMapper.toGameStateDto(entities.getFirst());
+                .filter(e -> FEN_INIT.equals(e.getKey().fenBoard()))
+                .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
+        ;
+        if (!mapEntities.isEmpty()) {
+            return chessMapper.toGameStateDto(mapEntities.keySet().stream().findFirst().get());
         }
         ChessEntity entity = ChessEntity.initial();
         entity = chessRepository.save(entity);
-        user.getChessEntities().add(entity);
+        user.addChessEntity(entity, Color.WHITE);
         userRepository.save(user);
         return chessMapper.toGameStateDto(entity);
     }
@@ -107,11 +114,11 @@ public class ChessServiceImpl implements ChessService {
     public GameStateDto makeBotMove(String gameId, int depth, JwtAuthenticationToken token) {
         ChessEntity entity = getEntity(gameId);
         ChessGame game = chessMapper.toDomain(entity);
-        if (game.getPlayerBotColor() != game.getActiveColor()) {
+        if (game.getActiveColor().isWhite()) {
             throw new InvalidTurnException(GameConstants.NOT_BOT_TURN_MSG);
         }
         String uci = botMove(entity.toFen(), depth <= 0 ? GameConstants.DEFAULT_DEPTH : depth);
-        return makeMove(gameId, new MoveDto(game.getPlayerBotColor().fen(), uci), token);
+        return makeMove(gameId, new MoveDto("b", uci), token);
     }
 
     @Override
@@ -146,9 +153,6 @@ public class ChessServiceImpl implements ChessService {
         checkUserAuthorization(token, gameId);
         ChessEntity entity = getEntity(gameId);
         ChessGame game = chessMapper.toDomain(entity);
-        if (game.getActiveColor() != game.getPlayerBotColor()) {
-            throw new InvalidTurnException(GameConstants.NOT_BOT_TURN_MSG);
-        }
         game.getBoard().undoMove();
         game.getBoard().undoMove();
         entity = chessMapper.toEntity(game);
@@ -182,7 +186,7 @@ public class ChessServiceImpl implements ChessService {
     }
 
     private void checkUserAuthorization(JwtAuthenticationToken token, String gameId) {
-        if (!userRepository.existsByIdAndChessEntityId(token.getName(), gameId)) {
+        if (!userRepository.existsByIdAndChessEntitiesContainsKey(token.getName(), gameId)) {
             throw new IllegalArgumentException("User not authorized");
         }
     }

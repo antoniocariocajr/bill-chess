@@ -11,9 +11,12 @@ import org.springframework.data.mongodb.core.index.Indexed;
 import org.springframework.data.mongodb.core.mapping.DBRef;
 import org.springframework.data.mongodb.core.mapping.Document;
 
+import com.bill.bill_chess.domain.enums.Color;
+
 import java.time.Instant;
 import java.util.EnumSet;
-import java.util.HashSet;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Set;
 
 @NoArgsConstructor
@@ -37,7 +40,7 @@ public class User {
     private Set<Role> roles = EnumSet.noneOf(Role.class); // ADMIN, PLAYER
     @DBRef
     @Builder.Default
-    private Set<ChessEntity> chessEntities = new HashSet<>();
+    private Map<ChessEntity, Color> chessEntities = new HashMap<>();
     @Builder.Default
     private boolean enabled = true;
     @Builder.Default
@@ -59,8 +62,8 @@ public class User {
         this.roles.remove(role);
     }
 
-    public void addChessEntity(ChessEntity chessEntity) {
-        this.chessEntities.add(chessEntity);
+    public void addChessEntity(ChessEntity chessEntity, Color color) {
+        this.chessEntities.put(chessEntity, color);
     }
 
     public void removeChessEntity(ChessEntity chessEntity) {

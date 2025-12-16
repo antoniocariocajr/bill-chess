@@ -14,7 +14,6 @@ public record ChessEntity(
                 @Id String id,
                 String fenBoard, // posição
                 @Size(max = 1) String activeColor, // "w" ou "b"
-                @Size(max = 1) String playerBotColor, // "w" ou "b"
                 @Size(max = 4) String castlingRights, // "KQkq" ou "-"
                 @Size(max = 2) String enPassantSquare, // "e3" ou "-"
                 int halfMoveClock,
@@ -34,7 +33,7 @@ public record ChessEntity(
                 return new ChessEntity(
                                 null,
                                 "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR",
-                                "w", "b", "KQkq", "-", 0, 1,
+                                "w", "KQkq", "-", 0, 1,
                                 false,
                                 "IN_PROGRESS",
                                 new ArrayList<>(),
@@ -42,7 +41,4 @@ public record ChessEntity(
                                 Instant.now());
         }
 
-        public boolean isTurnBot() {
-                return activeColor().equals(playerBotColor());
-        }
 }

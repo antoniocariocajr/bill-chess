@@ -29,9 +29,6 @@ public class ChessGame {
     private Color activeColor = Color.WHITE;
 
     @Builder.Default
-    private Color playerBotColor = Color.BLACK;
-
-    @Builder.Default
     private GameStatus status = GameStatus.IN_PROGRESS;
 
     @Builder.Default

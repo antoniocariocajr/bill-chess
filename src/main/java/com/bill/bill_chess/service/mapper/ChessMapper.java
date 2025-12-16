@@ -22,7 +22,6 @@ public class ChessMapper {
                 game.getId(),
                 game.getBoard(),
                 game.getActiveColor(),
-                game.getPlayerBotColor(),
                 game.getCastleRights(),
                 game.getEnPassant(),
                 game.getHalfMoveClock(),
@@ -37,7 +36,6 @@ public class ChessMapper {
             String id,
             Board board,
             Color active,
-            Color playerBot,
             Set<CastleRight> rights,
             Position enPassant,
             int halfMove,
@@ -56,7 +54,6 @@ public class ChessMapper {
                 id,
                 boardFen.toString(),
                 active.isWhite() ? "w" : "b",
-                playerBot.isWhite() ? "w" : "b",
                 setRights,
                 enPassant == null ? "-" : enPassant.toNotation(),
                 halfMove,
@@ -88,7 +85,6 @@ public class ChessMapper {
                 .id(entity.id())
                 .board(Board.fromFen(entity.fenBoard(), moves))
                 .activeColor(color)
-                .playerBotColor(Objects.equals(entity.playerBotColor(), "w") ? Color.WHITE : Color.BLACK)
                 .castleRights(rights)
                 .enPassant(enPassant)
                 .halfMoveClock(entity.halfMoveClock())
@@ -106,7 +102,7 @@ public class ChessMapper {
                 entity.status(),
                 entity.inCheck(),
                 entity.moves().isEmpty() ? "-" : entity.moves().getLast().uci(),
-                entity.activeColor().equals(entity.playerBotColor()));
+                entity.activeColor().equals("w"));
     }
 
     public MoveEntity toMoveEntity(Move move) {
