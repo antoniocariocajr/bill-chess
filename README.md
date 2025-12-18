@@ -18,7 +18,9 @@ Este projeto não é apenas um backend; é um árbitro digital imparcial, um opo
 ### ✨ O que faz ele brilhar?
 
 * **Arbitragem Completa**: Validação de movimentos legais, xeque, xeque-mate, roque e *en passant*. Nada escapa.
+* **Segurança Primeiro**: Sistema robusto de autenticação via **JWT** (JSON Web Tokens). Seus jogos, suas regras.
 * **Oponente IA Integrado**: Desafie o **Bot** alimentado pelo Stockfish. Ele não tem piedade (mas você pode configurar a profundidade 😉).
+* **Funcionalidades Modernas**: Errou? Use o `undo` (desfazer). Precisa de ajuda? Peça o `best-move` para a IA.
 * **Arquitetura Limpa**: Código organizado, desacoplado e fácil de estender.
 * **Documentação Viva**: Swagger UI integrado para você testar a API sem escrever uma linha de código frontend.
 
@@ -61,7 +63,15 @@ cd bill-chess
 
 Certifique-se de que o MongoDB está rodando na porta padrão `27017`. Se não, ajuste em `src/main/resources/application.properties`.
 
-### 3. Build & Run
+### 3. Configuração de Segurança (JWT)
+
+O sistema utiliza chaves RSA para assinatura de tokens. Certifique-se de que os arquivos `app.pub` e `app.key` estão em `src/main/resources`.
+
+### 4. Frontend & CORS
+
+Por padrão, a API está configurada para aceitar requisições do frontend Angular rodando em `http://localhost:4200`.
+
+### 5. Build & Run
 
 ```bash
 ./mvnw clean spring-boot:run
@@ -80,9 +90,20 @@ Acesse a interface interativa do Swagger UI e comece a fazer jogadas HTTP:
 
 ### Endpoints Principais
 
+> 🔒 **Nota de Segurança**: A maioria dos endpoints requer um token JWT no cabeçalho `Authorization: Bearer <token>`. Obtenha o token via `/auth/login` ou `/auth/register`.
+
+#### Autenticação
+
+* `POST /auth/register`: Cria um novo usuário.
+* `POST /auth/login`: Autentica e retorna o token JWT.
+
+#### Jogo
+
 * `POST /api/chess/init`: Começa uma nova guerra... digo, partida.
 * `POST /api/chess/{id}/move`: Faz um movimento humano.
-* `POST /api/chess/{id}/bot/move`: Pede para o Bot responder (prepara-se para suar).
+* `POST /api/chess/{id}/undo`: **[Novo]** Arrependido? Desfaça a última jogada.
+* `POST /api/chess/{id}/best-move`: **[Novo]** Peça uma dica para a IA (Stockfish).
+* `POST /api/chess/{id}/bot/move`: Pede para o Bot responder.
 * `GET /api/chess/{id}`: Espia o estado atual do tabuleiro.
 * `GET /api/chess/{id}/legal-moves`: Pergunta ao árbitro "pra onde posso ir?".
 
